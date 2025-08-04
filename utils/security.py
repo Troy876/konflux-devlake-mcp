@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
-from database_mcp_server.utils.logger import get_logger
+from utils.logger import get_logger
 
 
 class KonfluxDevLakeSecurityManager:

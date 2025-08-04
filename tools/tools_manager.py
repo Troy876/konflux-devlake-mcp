@@ -1,140 +1,111 @@
 #!/usr/bin/env python3
 """
-Konflux DevLake MCP Server - Tools Manager
+Tools Manager for Konflux DevLake MCP Server
 
-Manages database tools and natural language query generation.
+Manages all tools using a modular approach with clear separation of concerns
+and improved maintainability.
 """
 
 import json
-import logging
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from mcp.types import Tool
 
-from database_mcp_server.utils.logger import get_logger, log_tool_call, log_database_operation
-from database_mcp_server.utils.db import DateTimeEncoder
+from tools.base.base_tool import BaseTool
+from tools.database_tools import DatabaseTools
+from tools.devlake.incident_tools import IncidentTools
+from tools.devlake.deployment_tools import DeploymentTools
+from utils.logger import get_logger, log_tool_call
 
 
 class KonfluxDevLakeToolsManager:
-    """Konflux DevLake Tools Manager"""
+    """
+    Tools manager for Konflux DevLake MCP Server.
+    
+    This class coordinates all tool modules using a modular approach with
+    clear separation of concerns and improved error handling.
+    """
     
     def __init__(self, db_connection):
+        """
+        Initialize the tools manager.
+        
+        Args:
+            db_connection: Database connection manager
+        """
         self.db_connection = db_connection
         self.logger = get_logger(f"{__name__}.KonfluxDevLakeToolsManager")
+        
+        # Initialize tool modules using the base tool interface
+        self._tool_modules: List[BaseTool] = [
+            DatabaseTools(db_connection),
+            IncidentTools(db_connection),
+            DeploymentTools(db_connection)
+        ]
+        
+        # Create tool name to module mapping for efficient routing
+        self._tool_mapping = self._create_tool_mapping()
+    
+    def _create_tool_mapping(self) -> Dict[str, BaseTool]:
+        """
+        Create a mapping of tool names to their respective modules.
+        
+        Returns:
+            Dictionary mapping tool names to tool modules
+        """
+        tool_mapping = {}
+        
+        for module in self._tool_modules:
+            for tool in module.get_tools():
+                tool_mapping[tool.name] = module
+        
+        self.logger.info(f"Created tool mapping with {len(tool_mapping)} tools")
+        return tool_mapping
     
     async def list_tools(self) -> List[Tool]:
-        """List all available tools"""
-        tools = [
-            Tool(
-                name="connect_database",
-                description="🔌 **Database Connection Tool** - Establishes and verifies connection to the Konflux DevLake database. Use this tool to test connectivity before running other database operations. Returns connection status and database information. This is typically the first tool you should call to ensure the database is accessible.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {},
-                    "required": []
-                }
-            ),
-            Tool(
-                name="list_databases",
-                description="📊 **Database Discovery Tool** - Lists all available databases in the Konflux DevLake system. This tool shows you what data sources are available, including the main 'lake' database containing incidents, deployments, and other Konflux operational data. Use this to explore what data is available before diving into specific tables.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {},
-                    "required": []
-                }
-            ),
-            Tool(
-                name="list_tables",
-                description="📋 **Table Explorer Tool** - Lists all tables within a specific database. This tool helps you discover what data is available in each database. For the 'lake' database, you'll find tables like 'incidents', 'cicd_deployments', 'cicd_deployment_commits', and 'project_mapping'. Use this to understand the data structure before querying specific tables.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "database": {"type": "string", "description": "Database name to explore. Common options: 'lake' (main DevLake data), 'information_schema' (MySQL system tables), 'test_db' (test database)"}
-                    },
-                    "required": ["database"]
-                }
-            ),
-            Tool(
-                name="get_table_schema",
-                description="🔍 **Schema Inspector Tool** - Provides detailed schema information for a specific table, including column names, data types, constraints, and descriptions. This tool is essential for understanding the structure of tables before writing queries. For example, the 'incidents' table contains fields like 'incident_key', 'title', 'status', 'created_date', and 'lead_time_minutes'.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "database": {"type": "string", "description": "Database name containing the table. Use 'lake' for main DevLake tables like incidents, deployments, etc."},
-                        "table": {"type": "string", "description": "Table name to inspect. Common tables: 'incidents', 'cicd_deployments', 'cicd_deployment_commits', 'project_mapping'"}
-                    },
-                    "required": ["database", "table"]
-                }
-            ),
-            Tool(
-                name="execute_query",
-                description="⚡ **Custom SQL Query Tool** - Executes custom SQL queries against the Konflux DevLake database. This powerful tool allows you to write complex queries to analyze incidents, deployments, and other operational data. Supports SELECT queries with filtering, aggregation, joins, and advanced SQL features. Use this for custom analysis, reporting, and data exploration. Example queries: 'SELECT * FROM lake.incidents WHERE status = \"DONE\"', 'SELECT COUNT(*) FROM lake.cicd_deployments WHERE environment = \"PRODUCTION\"'.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string", "description": "SQL query to execute (e.g., 'SELECT * FROM lake.incidents LIMIT 10')"},
-                        "limit": {"type": "integer", "description": "Maximum number of rows to return (default: 100, max: 1000)"}
-                    },
-                    "required": ["query"]
-                }
-            ),
-            Tool(
-                name="get_unique_incidents",
-                description="🚨 **Incident Analysis Tool** - Retrieves all unique incidents from the Konflux DevLake database, automatically deduplicated by incident_key to show only the most recent version of each incident. This tool provides comprehensive incident data including incident_key, title, description, status, created_date, resolution_date, lead_time_minutes, component, and URL. Perfect for incident analysis, reporting, and understanding operational issues. Returns incidents sorted by creation date (newest first).",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "limit": {"type": "integer", "description": "Maximum number of incidents to return (default: 100, max: 500)"}
-                    },
-                    "required": []
-                }
-            ),
-            Tool(
-                name="get_deployment_list",
-                description="🚀 **Deployment Analytics Tool** - Retrieves deployment data from the Konflux DevLake database with advanced filtering capabilities. This tool provides comprehensive deployment information including deployment_id, display_title, url, result, environment, finished_date, and project details. Supports filtering by project (e.g., 'redhat-appstudio/infra-deployments'), environment (e.g., 'PRODUCTION'), time range (days_back), and result limits. Perfect for deployment frequency analysis, release tracking, and operational reporting. Returns deployments sorted by finished_date (newest first).",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "project": {"type": "string", "description": "Project name to filter by (default: 'redhat-appstudio/infra-deployments')"},
-                        "environment": {"type": "string", "description": "Environment to filter by (default: 'PRODUCTION', options: 'PRODUCTION', 'STAGING', 'DEVELOPMENT')"},
-                        "limit": {"type": "integer", "description": "Maximum number of deployments to return (default: 50, max: 200)"},
-                        "days_back": {"type": "integer", "description": "Number of days back to include in results (default: 30, max: 365)"}
-                    },
-                    "required": []
-                }
-            )
-        ]
-
+        """
+        List all available tools from all modules.
+        
+        Returns:
+            List of all available Tool objects
+        """
+        tools = []
+        
+        for module in self._tool_modules:
+            tools.extend(module.get_tools())
+        
+        self.logger.info(f"Returning {len(tools)} tools from {len(self._tool_modules)} modules")
         return tools
     
     async def call_tool(self, name: str, arguments: Dict[str, Any]) -> str:
-        """Call a tool by name"""
+        """
+        Call a tool by name, delegating to the appropriate module.
+        
+        Args:
+            name: Name of the tool to execute
+            arguments: Tool arguments
+            
+        Returns:
+            JSON string with tool execution result
+        """
         try:
             # Log tool call
             log_tool_call(name, arguments, success=True)
             
-            if name == "connect_database":
-                result = await self._connect_database_tool()
-            elif name == "list_databases":
-                result = await self._list_databases_tool()
-            elif name == "list_tables":
-                result = await self._list_tables_tool(arguments)
-            elif name == "get_table_schema":
-                result = await self._get_table_schema_tool(arguments)
-            elif name == "execute_query":
-                result = await self._execute_query_tool(arguments)
-            elif name == "get_unique_incidents":
-                result = await self._get_unique_incidents_tool(arguments)
-            elif name == "get_deployment_list":
-                result = await self._get_deployment_list_tool(arguments)
-            else:
-                result = {
+            # Find the appropriate module for this tool
+            if name not in self._tool_mapping:
+                error_result = {
                     "success": False,
-                    "error": f"Unknown tool: {name}"
+                    "error": f"Unknown tool: {name}",
+                    "available_tools": list(self._tool_mapping.keys())
                 }
+                return json.dumps(error_result, indent=2)
             
-            return json.dumps(result, indent=2, cls=DateTimeEncoder)
+            # Execute the tool using the appropriate module
+            module = self._tool_mapping[name]
+            result = await module.call_tool(name, arguments)
+            
+            return result
         
         except Exception as e:
             self.logger.error(f"Tool call failed: {e}")
@@ -145,153 +116,55 @@ class KonfluxDevLakeToolsManager:
                 "tool_name": name,
                 "arguments": arguments
             }
-            return json.dumps(error_result, indent=2, cls=DateTimeEncoder)
+            return json.dumps(error_result, indent=2)
     
-    async def _connect_database_tool(self) -> Dict[str, Any]:
-        """Connect to database tool"""
-        self.logger.info("Connecting to database...")
-        result = await self.db_connection.connect()
-        log_database_operation("connect", success=result.get("success", False), error=result.get("error"))
-        return result
-    
-    async def _list_databases_tool(self) -> Dict[str, Any]:
-        """List databases tool"""
-        self.logger.info("Listing databases...")
-        result = await self.db_connection.execute_query("SHOW DATABASES")
-        if result["success"]:
-            log_database_operation("list_databases", success=True)
-            return {
-                "success": True,
-                "databases": [db['Database'] for db in result["data"]]
-            }
-        log_database_operation("list_databases", success=False, error=result.get("error"))
-        return result
-    
-    async def _list_tables_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """List tables tool"""
-        database = arguments.get("database")
-        self.logger.info(f"Listing tables in database: {database}")
-        result = await self.db_connection.execute_query(f"SHOW TABLES FROM `{database}`")
-        if result["success"]:
-            log_database_operation("list_tables", success=True)
-            return {
-                "success": True,
-                "database": database,
-                "tables": [list(table.values())[0] for table in result["data"]]
-            }
-        log_database_operation("list_tables", success=False, error=result.get("error"))
-        return result
-    
-    async def _get_table_schema_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Get table schema tool"""
-        database = arguments.get("database")
-        table = arguments.get("table")
-        self.logger.info(f"Getting schema for table: {database}.{table}")
+    def get_tool_statistics(self) -> Dict[str, Any]:
+        """
+        Get statistics about available tools.
         
-        # Get table schema
-        schema_result = await self.db_connection.execute_query(f"DESCRIBE `{database}`.`{table}`")
-        if not schema_result["success"]:
-            log_database_operation("get_table_schema", success=False, error=schema_result.get("error"))
-            return schema_result
+        Returns:
+            Dictionary with tool statistics
+        """
+        total_tools = len(self._tool_mapping)
+        tools_by_module = {}
         
-        # Get row count
-        count_result = await self.db_connection.execute_query(f"SELECT COUNT(*) as row_count FROM `{database}`.`{table}`")
+        for module in self._tool_modules:
+            module_name = module.__class__.__name__
+            tools_by_module[module_name] = len(module.get_tools())
         
-        log_database_operation("get_table_schema", success=True)
         return {
-            "success": True,
-            "database": database,
-            "table": table,
-            "row_count": count_result["data"][0]["row_count"] if count_result["success"] else 0,
-            "columns": schema_result["data"]
+            "total_tools": total_tools,
+            "modules": len(self._tool_modules),
+            "tools_by_module": tools_by_module,
+            "available_tools": list(self._tool_mapping.keys())
         }
     
-    async def _execute_query_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute query tool"""
-        query = arguments.get("query")
-        limit = arguments.get("limit", 100)
-        self.logger.info(f"Executing query with limit: {limit}")
-        result = await self.db_connection.execute_query(query, limit)
-        log_database_operation("execute_query", query=query, success=result.get("success", False), error=result.get("error"))
-        return result
-    
-    async def _get_unique_incidents_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Get all unique incidents from lake.incidents, deduplicated by incident_key (most recent only)"""
-        limit = arguments.get("limit", 100)
-        query = (
-            "SELECT t1.* FROM lake.incidents t1 "
-            "INNER JOIN (SELECT incident_key, MAX(id) AS max_id FROM lake.incidents GROUP BY incident_key) t2 "
-            "ON t1.incident_key = t2.incident_key AND t1.id = t2.max_id "
-            "ORDER BY t1.incident_key "
-            f"LIMIT {limit}"
-        )
-        result = await self.db_connection.execute_query(query, limit)
-        return result
-    
-    async def _get_deployment_list_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Get deployment list with filtering by project, environment, and time range"""
-        project = arguments.get("project", "redhat-appstudio/infra-deployments")
-        environment = arguments.get("environment", "PRODUCTION")
-        limit = arguments.get("limit", 50)
-        days_back = arguments.get("days_back", 30)
-        
-        self.logger.info(f"Getting deployment list for project: {project}, environment: {environment}, days back: {days_back}, limit: {limit}")
-        
-        # Calculate the start date for the time range
-        start_date = datetime.now() - timedelta(days=days_back)
-        start_date_str = start_date.strftime('%Y-%m-%d %H:%M:%S')
-        
-        # Use the exact query structure provided by the user
-        query = f"""
-        WITH _deployment_commit_rank AS (
-            SELECT
-                pm.project_name,
-                IF(cdc._raw_data_table != '', cdc._raw_data_table, cdc.cicd_scope_id) as _raw_data_table,
-                cdc.id,
-                cdc.display_title,
-                cdc.url,
-                cdc.cicd_deployment_id,
-                cdc.cicd_scope_id,
-                cdc.result,
-                cdc.environment,
-                cdc.finished_date,
-                ROW_NUMBER() OVER(PARTITION BY cdc.cicd_deployment_id ORDER BY cdc.finished_date DESC) as _deployment_commit_rank
-            FROM lake.cicd_deployment_commits cdc
-            LEFT JOIN lake.project_mapping pm ON cdc.cicd_scope_id = pm.row_id AND pm.`table` = 'cicd_scopes'
-            WHERE
-                pm.project_name IN ('{project}')
-                AND cdc.result = 'SUCCESS'
-                AND cdc.environment = '{environment}'
-                AND cdc.finished_date >= '{start_date_str}'
-        )
-        SELECT 
-            project_name, 
-            cicd_deployment_id as deployment_id,
-            CASE WHEN display_title = '' THEN 'N/A' ELSE display_title END as display_title,
-            url,
-            url as metric_hidden,
-            result,
-            environment,
-            finished_date
-        FROM _deployment_commit_rank
-        WHERE 
-            _deployment_commit_rank = 1
-            AND finished_date >= '{start_date_str}'
-        ORDER BY finished_date DESC
-        LIMIT {limit}
+    def validate_tool_exists(self, name: str) -> bool:
         """
+        Check if a tool exists.
         
-        result = await self.db_connection.execute_query(query, limit)
-        log_database_operation("get_deployment_list", query=query, success=result.get("success", False), error=result.get("error"))
+        Args:
+            name: Tool name to check
+            
+        Returns:
+            True if tool exists, False otherwise
+        """
+        return name in self._tool_mapping
+    
+    def get_tool_module(self, name: str) -> BaseTool:
+        """
+        Get the module that provides a specific tool.
         
-        if result["success"]:
-            return {
-                "success": True,
-                "project": project,
-                "environment": environment,
-                "days_back": days_back,
-                "limit": limit,
-                "query": query,
-                "deployments": result["data"]
-            }
-        return result 
+        Args:
+            name: Tool name
+            
+        Returns:
+            Tool module that provides the specified tool
+            
+        Raises:
+            KeyError: If tool doesn't exist
+        """
+        if name not in self._tool_mapping:
+            raise KeyError(f"Tool '{name}' not found")
+        
+        return self._tool_mapping[name] 

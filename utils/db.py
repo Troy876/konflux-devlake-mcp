@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 import pymysql
 from pymysql.cursors import DictCursor
 
-from database_mcp_server.utils.logger import get_logger, log_database_operation
+from utils.logger import get_logger, log_database_operation
 
 
 class DateTimeEncoder(json.JSONEncoder):

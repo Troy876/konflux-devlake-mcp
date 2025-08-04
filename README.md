@@ -2,7 +2,7 @@
 
 A MCP server that enables natural language querying of Konflux DevLake databases. This server acts as a bridge between AI assistants and your DevLake database, allowing you to ask questions in plain language and get structured data back.
 
-## 🚀 Quick Start
+## Quick Start
 
 1. **Install dependencies**:
 ```bash
@@ -10,11 +10,12 @@ pip install -r requirements.txt
 ```
 
 2. **Start the server**:
+
 ```bash
-python run_server.py --transport http --host 0.0.0.0 --port 3000 --db-host localhost --db-port 3306 --db-user root --db-password password --db-database lake
+python konflux-devlake-mcp.py --transport http --host 0.0.0.0 --port 3000 --db-host localhost --db-port 3306 --db-user root --db-password password --db-database lake
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Command Line Arguments
 
@@ -46,15 +47,15 @@ export LOG_LEVEL=INFO
 
 Then run:
 ```bash
-python run_server.py
+python konflux-devlake-mcp.py
 ```
 
 ### Help Command
 ```bash
-python run_server.py --help
+python konflux-devlake-mcp.py --help
 ```
 
-## 🛠️ Available Tools
+## Available Tools
 
 This server provides several specialized tools for working with your DevLake data:
 
@@ -62,7 +63,7 @@ This server provides several specialized tools for working with your DevLake dat
 - **Incident Analysis**: Get unique incidents with automatic deduplication, analyze incident patterns, and track resolution times
 - **Deployment Tracking**: Monitor deployment data with advanced filtering, track deployment frequency, and analyze service distribution
 
-## 📊 Features
+## Features
 
 - **Natural Language Processing**: Convert plain English questions into SQL queries automatically
 - **Security First**: Built-in SQL injection detection and comprehensive query validation to protect your data
@@ -70,7 +71,7 @@ This server provides several specialized tools for working with your DevLake dat
 - **Flexible Transport**: Support for both HTTP and stdio transport protocols
 - **Comprehensive Logging**: Detailed logging with rotation and error tracking for debugging and monitoring
 
-## 🔒 Security
+## Security
 
 Your data security is our priority:
 
@@ -79,7 +80,7 @@ Your data security is our priority:
 - **Data Masking**: Sensitive information is automatically masked in query results
 - **Access Control**: Database-level access control ensures only authorized operations are performed
 
-## 📈 Monitoring
+## Monitoring
 
 Keep track of your server's health and performance:
 
@@ -87,7 +88,7 @@ Keep track of your server's health and performance:
 - **Error Logs**: `logs/konflux_devlake_mcp_server_error.log` - Detailed error information for troubleshooting
 - **Health Check**: `GET http://localhost:3000/health` - Monitor server status and connectivity
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions to improve this project:
 
@@ -96,7 +97,7 @@ We welcome contributions to improve this project:
 3. Make your improvements and add tests
 4. Submit a pull request with a clear description of your changes
 
-## 💡 Use Cases
+## Use Cases
 
 This MCP server is particularly useful for:
 

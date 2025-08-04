@@ -31,7 +31,7 @@ def get_logger(name: str = None) -> logging.Logger:
 def _setup_logging() -> logging.Logger:
     """Setup logging configuration"""
     # Create logs directory if it doesn't exist
-    logs_dir = Path("logs")
+    logs_dir = Path(os.getenv("LOG_DIR", "logs"))
     logs_dir.mkdir(exist_ok=True)
     
     # Create formatter
@@ -88,7 +88,7 @@ def log_system_info():
     logger.info(f"Python version: {sys.version}")
     logger.info(f"Platform: {sys.platform}")
     logger.info(f"Working directory: {os.getcwd()}")
-    logger.info(f"Logs directory: {Path('logs').absolute()}")
+    logger.info(f"Logs directory: {Path(os.getenv('LOG_DIR', 'logs')).absolute()}")
     
     # Log environment variables (without sensitive data)
     env_vars = [
