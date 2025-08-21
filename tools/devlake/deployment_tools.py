@@ -125,7 +125,7 @@ class DeploymentTools(BaseTool):
                     "error": f"Invalid date_field '{date_field}'. Must be one of: {', '.join(valid_date_fields)}"
                 }
             
-            # Build the Grafana-like query with improved deduplication
+            # Build the query using the exact structure provided
             base_query = """
             WITH _deployment_commit_rank AS (
                 SELECT
@@ -139,16 +139,7 @@ class DeploymentTools(BaseTool):
                     result,
                     environment,
                     finished_date,
-                    -- Improved deduplication: partition by base deployment ID (without component prefixes)
-                    row_number() OVER(
-                        PARTITION BY 
-                            CASE 
-                                WHEN cdc.cicd_deployment_id LIKE 'components-%' 
-                                THEN SUBSTRING_INDEX(cdc.cicd_deployment_id, '-', -1)
-                                ELSE cdc.cicd_deployment_id 
-                            END
-                        ORDER BY finished_date DESC, cdc.id DESC
-                    ) as _deployment_commit_rank
+                    row_number() OVER(PARTITION BY cdc.cicd_deployment_id ORDER BY finished_date DESC) as _deployment_commit_rank
                 FROM lake.cicd_deployment_commits cdc
                 LEFT JOIN lake.project_mapping pm ON cdc.cicd_scope_id = pm.row_id AND pm.`table` = 'cicd_scopes'
                 WHERE 1=1
@@ -157,16 +148,17 @@ class DeploymentTools(BaseTool):
             # Build WHERE conditions for the CTE
             where_conditions = []
             
-            if project:
-                where_conditions.append(f"pm.project_name = '{project}'")
+            # Always exclude github_pages deployments (not production)
+            where_conditions.append("cdc.cicd_deployment_id NOT LIKE '%github_pages%'")
+            where_conditions.append("cdc.display_title NOT LIKE '%github_pages%'")
             
-            if environment:
-                where_conditions.append(f"result = 'SUCCESS'")
-                where_conditions.append(f"environment = '{environment}'")
+            if project:
+                where_conditions.append(f"pm.project_name IN ('{project}')")
             else:
-                # Default to PRODUCTION if no environment specified
-                where_conditions.append(f"result = 'SUCCESS'")
-                where_conditions.append(f"environment = 'PRODUCTION'")
+                # Default to Konflux_Pilot_Team if no project specified
+                where_conditions.append("pm.project_name IN ('Konflux_Pilot_Team')")
+            
+            where_conditions.append("environment = 'PRODUCTION'")
             
             # Date filtering - prioritize explicit date ranges over days_back
             if start_date or end_date:

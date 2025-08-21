@@ -1,0 +1,142 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: konflux-mcp-server
+  namespace: devlake
+  labels:
+    app: konflux-mcp-server
+    component: mcp-server
+    app.kubernetes.io/instance: devlake
+    app.kubernetes.io/name: devlake
+    devlakeComponent: ui
+  annotations:
+    openshift.io/display-name: "Konflux DevLake MCP Server"
+    openshift.io/description: "MCP Server for Konflux DevLake data analysis"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: konflux-mcp-server
+  template:
+    metadata:
+      labels:
+        app: konflux-mcp-server
+        component: mcp-server
+        app.kubernetes.io/instance: devlake
+        app.kubernetes.io/name: devlake
+        devlakeComponent: ui
+    spec:
+      serviceAccountName: konflux-mcp-server
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+      - name: logs-volume
+        emptyDir: {}
+      containers:
+      - name: mcp-server
+        image: quay.io/flacatus/mcp-lake:1.0.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        # Database connection to existing DevLake
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: konflux-mcp-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: konflux-mcp-config
+              key: DB_PORT
+        - name: DB_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: konflux-mcp-config
+              key: DB_DATABASE
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: devlake-mysql-auth
+              key: MYSQL_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: devlake-mysql-auth
+              key: MYSQL_PASSWORD
+
+        # Server configuration
+        - name: SERVER_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: konflux-mcp-config
+              key: SERVER_HOST
+        - name: SERVER_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: konflux-mcp-config
+              key: SERVER_PORT
+        - name: SERVER_TRANSPORT
+          valueFrom:
+            configMapKeyRef:
+              name: konflux-mcp-config
+              key: SERVER_TRANSPORT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: konflux-mcp-config
+              key: LOG_LEVEL
+        - name: LOG_DIR
+          value: "/app/logs"
+        - name: PYTHONPATH
+          value: "/app"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+        command: ["python"]
+        args: [
+          "konflux-devlake-mcp.py",
+          "--transport", "http",
+          "--host", "0.0.0.0",
+          "--port", "3000",
+          "--db-host", "$(DB_HOST)",
+          "--db-port", "$(DB_PORT)",
+          "--db-user", "$(DB_USER)",
+          "--db-password", "$(DB_PASSWORD)",
+          "--db-database", "$(DB_DATABASE)",
+          "--log-level", "$(LOG_LEVEL)"
+        ]
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
