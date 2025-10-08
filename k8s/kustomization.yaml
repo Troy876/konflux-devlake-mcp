@@ -1,13 +1,12 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: devlake
+namespace: konflux-devlake
 
 resources:
-  - namespace.yaml
+#  - namespace.yaml
   - serviceaccount.yaml
   - configmap.yaml
-  - secret.yaml
   - mcp-server-deployment.yaml
   - mcp-server-service.yaml
   - route.yaml
@@ -19,4 +18,4 @@ commonLabels:
 images:
   - name: konflux-mcp-server
     newName: quay.io/flacatus/mcp-lake
-    newTag: "1.0.0" 
+    newTag: "1.0.0"
