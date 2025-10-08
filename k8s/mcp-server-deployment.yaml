@@ -61,12 +61,12 @@ spec:
         - name: DB_USER
           valueFrom:
             secretKeyRef:
-              name: devlake-mysql-auth
+              name: konflux-devlake-secrets
               key: MYSQL_USER
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: devlake-mysql-auth
+              name: konflux-devlake-secrets
               key: MYSQL_PASSWORD
 
         # Server configuration
