@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: devlake
+  name: konflux-devlake
   labels:
-    name: devlake
+    name: konflux-devlake
     app: konflux-devlake-mcp
     app.kubernetes.io/instance: devlake
     app.kubernetes.io/name: devlake

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: konflux-mcp-server
-  namespace: devlake
+  namespace: konflux-devlake
   labels:
     app: konflux-mcp-server
     component: mcp-server
@@ -45,19 +45,19 @@ spec:
         # Database connection to existing DevLake
         - name: DB_HOST
           valueFrom:
-            configMapKeyRef:
-              name: konflux-mcp-config
-              key: DB_HOST
+            secretKeyRef:
+              name: konflux-devlake-secrets
+              key: MYSQL_SERVER
         - name: DB_PORT
           valueFrom:
-            configMapKeyRef:
-              name: konflux-mcp-config
-              key: DB_PORT
+            secretKeyRef:
+              name: konflux-devlake-secrets
+              key: MYSQL_PORT
         - name: DB_DATABASE
           valueFrom:
-            configMapKeyRef:
-              name: konflux-mcp-config
-              key: DB_DATABASE
+            secretKeyRef:
+              name: konflux-devlake-secrets
+              key: MYSQL_DATABASE
         - name: DB_USER
           valueFrom:
             secretKeyRef:
@@ -71,25 +71,13 @@ spec:
 
         # Server configuration
         - name: SERVER_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: konflux-mcp-config
-              key: SERVER_HOST
+          value: "0.0.0.0"
         - name: SERVER_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: konflux-mcp-config
-              key: SERVER_PORT
+          value: "3000"
         - name: SERVER_TRANSPORT
-          valueFrom:
-            configMapKeyRef:
-              name: konflux-mcp-config
-              key: SERVER_TRANSPORT
+          value: "http"
         - name: LOG_LEVEL
-          valueFrom:
-            configMapKeyRef:
-              name: konflux-mcp-config
-              key: LOG_LEVEL
+          value: "INFO"
         - name: LOG_DIR
           value: "/app/logs"
         - name: PYTHONPATH
