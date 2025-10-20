@@ -133,6 +133,7 @@ class TestDatabaseIntegration:
         assert "connection_info" in result
         
         conn_info = result["connection_info"]
+        # Accept both localhost and 127.0.0.1 as valid hosts
         assert conn_info["host"] in ["localhost", "127.0.0.1"]
         assert conn_info["port"] == 3306
         assert conn_info["database"] == "lake"
