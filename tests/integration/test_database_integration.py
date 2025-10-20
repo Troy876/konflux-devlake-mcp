@@ -7,6 +7,7 @@ against a real MySQL database instance.
 
 import pytest
 import json
+from typing import Dict, Any
 
 from tools.database_tools import DatabaseTools
 from utils.db import KonfluxDevLakeConnection
@@ -35,6 +36,8 @@ class TestDatabaseIntegration:
         assert result["success"] is True
         assert "data" in result
         
+        # Should contain our test database
+        # Data comes as list of dictionaries from MySQL DictCursor
         databases = [list(row.values())[0] for row in result["data"]]
         assert "lake" in databases
 
@@ -48,6 +51,8 @@ class TestDatabaseIntegration:
         assert result["success"] is True
         assert "data" in result
         
+        # Should contain our test tables
+        # Data comes as list of dictionaries from MySQL DictCursor
         tables = [list(row.values())[0] for row in result["data"]]
         expected_tables = ["incidents", "cicd_deployments", "cicd_deployment_commits", "project_mapping"]
         
@@ -67,9 +72,12 @@ class TestDatabaseIntegration:
         assert result["success"] is True
         assert "data" in result
         
+        # Check that we get schema information
         schema_data = result["data"]
         assert len(schema_data) > 0
         
+        # Check for expected columns
+        # Data comes as list of dictionaries from MySQL DictCursor
         column_names = [list(row.values())[0] for row in schema_data]
         expected_columns = ["id", "incident_key", "title", "status", "created_date"]
         
@@ -106,8 +114,10 @@ class TestDatabaseIntegration:
         """Test error handling in database tools."""
         db_tools = DatabaseTools(integration_db_connection)
         
+        # Test with missing required parameters
         result_json = await db_tools.call_tool("get_table_schema", {
             "database": "lake"
+            # Missing 'table' parameter
         })
         result = json.loads(result_json)
         
@@ -127,10 +137,12 @@ class TestDatabaseIntegration:
         assert conn_info["port"] == 3306
         assert conn_info["database"] == "lake"
         assert conn_info["user"] == "devlake"
+        # Password should not be included in connection info for security
         assert "password" not in conn_info
 
     async def test_database_query_execution(self, integration_db_connection: KonfluxDevLakeConnection):
         """Test direct query execution."""
+        # Test a simple SELECT query
         result = await integration_db_connection.execute_query(
             "SELECT COUNT(*) as incident_count FROM incidents"
         )
@@ -142,6 +154,7 @@ class TestDatabaseIntegration:
 
     async def test_database_query_with_parameters(self, integration_db_connection: KonfluxDevLakeConnection):
         """Test query execution with parameters."""
+        # Test querying specific incident data
         result = await integration_db_connection.execute_query(
             "SELECT incident_key, title, status FROM incidents WHERE status = 'DONE' LIMIT 5"
         )
@@ -149,6 +162,8 @@ class TestDatabaseIntegration:
         assert result["success"] is True
         assert "data" in result
         
+        # Should have at least one DONE incident from test data
         if result["data"]:
             for row in result["data"]:
+                # Each row should have 3 columns
                 assert len(row) == 3

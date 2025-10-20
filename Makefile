@@ -93,6 +93,16 @@ test-file:
 test-clean:
 	python run_tests.py --clean
 
+# Development commands
+run: ## Run the MCP server in stdio mode
+	python konflux-devlake-mcp.py --transport stdio
+
+run-http: ## Run the MCP server in HTTP mode
+	python konflux-devlake-mcp.py --transport http --host 0.0.0.0 --port 3000
+
+dev: ## Run in development mode with debug logging
+	python konflux-devlake-mcp.py --transport stdio --log-level DEBUG
+
 # Docker commands
 docker-build: ## Build Docker image
 	docker build -t konflux-devlake-mcp .
@@ -108,6 +118,58 @@ clean: test-clean
 
 check-deps:
 	python run_tests.py --check-deps
+
+# CI/CD simulation
+ci: clean install test-all ## Simulate CI pipeline locally
+
+# Quick development workflow
+quick-test: ## Quick test run (unit tests only, no verbose output)
+	python -m pytest -m unit -q
+
+watch-tests: ## Watch for file changes and run tests automatically (requires pytest-xdist)
+	python -m pytest -m unit --looponfail
+
+# Documentation
+docs: ## Generate documentation (placeholder)
+	@echo "Documentation generation not yet implemented"
+
+# Release preparation
+pre-commit: test-all ## Run pre-commit checks (all tests)
+	@echo "✅ Pre-commit checks completed successfully"
+
+# Advanced testing
+test-parallel: ## Run tests in parallel (requires pytest-xdist)
+	python -m pytest -m unit -n auto
+
+test-verbose: ## Run tests with maximum verbosity
+	python -m pytest -m unit -vvv --tb=long
+
+test-debug: ## Run tests with debugging enabled
+	python -m pytest -m unit -vvv --tb=long --pdb
+
+# Performance testing
+test-performance: ## Run performance-related tests (placeholder)
+	@echo "Performance tests not yet implemented"
+
+# Integration testing (requires database)
+# Note: This is a duplicate of the one above, keeping only the first one
+
+test-integration-setup: ## Start database services for integration tests (manual setup)
+	@if command -v docker-compose >/dev/null 2>&1; then \
+		docker-compose up -d mysql; \
+	else \
+		docker compose up -d mysql; \
+	fi
+	@echo "Waiting for database to be ready..."
+	@sleep 15
+	@echo "Database should be ready."
+
+test-integration-teardown: ## Stop database services (manual teardown)
+	@if command -v docker-compose >/dev/null 2>&1; then \
+		docker-compose down -v; \
+	else \
+		docker compose down -v; \
+	fi
 
 # Environment setup
 setup-dev: install-dev
