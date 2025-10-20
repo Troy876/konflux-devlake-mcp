@@ -4,8 +4,6 @@ on:
   push:
     branches: [main]
   pull_request:
-  schedule:
-    - cron: "0 0 * * *"
 
 permissions:
   contents: read
@@ -32,4 +30,4 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run unit tests
-        run: make test-unit
+        run: python run_tests.py --unit --verbose

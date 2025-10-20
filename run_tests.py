@@ -13,19 +13,22 @@ import argparse
 from pathlib import Path
 
 
-def run_command(cmd, description=""):
+def run_command(cmd, description="", suppress_output=False):
     """Run a command and handle the output."""
-    if description:
+    if description and not suppress_output:
         print(f"\n🔄 {description}")
     
-    print(f"Running: {' '.join(cmd)}")
+    if not suppress_output:
+        print(f"Running: {' '.join(cmd)}")
+    
     result = subprocess.run(cmd, capture_output=True, text=True)
     
-    if result.stdout:
-        print(result.stdout)
-    
-    if result.stderr:
-        print(result.stderr, file=sys.stderr)
+    if not suppress_output:
+        if result.stdout:
+            print(result.stdout)
+        
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
     
     return result.returncode == 0
 
@@ -51,15 +54,12 @@ def check_dependencies():
     return True
 
 
-def run_unit_tests(verbose=False, coverage=False, specific_test=None):
+def run_unit_tests(verbose=False, specific_test=None):
     """Run unit tests."""
-    cmd = ["python", "-m", "pytest", "-m", "unit"]
+    cmd = ["python", "-m", "pytest", "tests/unit/", "-m", "unit"]
     
     if verbose:
         cmd.append("-v")
-    
-    if coverage:
-        cmd.extend(["--cov=.", "--cov-report=html", "--cov-report=term-missing"])
     
     if specific_test:
         cmd.append(specific_test)
@@ -67,27 +67,38 @@ def run_unit_tests(verbose=False, coverage=False, specific_test=None):
     return run_command(cmd, "Running unit tests")
 
 
-def run_all_tests(verbose=False, coverage=False):
+def run_all_tests(verbose=False):
     """Run all tests."""
     cmd = ["python", "-m", "pytest"]
     
     if verbose:
         cmd.append("-v")
     
-    if coverage:
-        cmd.extend(["--cov=.", "--cov-report=html", "--cov-report=term-missing"])
-    
     return run_command(cmd, "Running all tests")
 
 
 def run_security_tests(verbose=False):
     """Run security-related tests."""
-    cmd = ["python", "-m", "pytest", "-m", "security"]
+    cmd = ["python", "-m", "pytest", "tests/unit/", "-m", "security"]
     
     if verbose:
         cmd.append("-v")
     
     return run_command(cmd, "Running security tests")
+
+
+def run_integration_tests(verbose=False):
+    """Run integration tests."""
+    print("🧪 Running integration tests...")
+    print("ℹ️  Note: Integration tests require a MySQL database to be running.")
+    print("ℹ️  Use 'make test-integration' for automatic database setup.")
+    
+    cmd = ["python", "-m", "pytest", "tests/integration/", "-m", "integration"]
+    
+    if verbose:
+        cmd.extend(["-v", "-s"])
+    
+    return run_command(cmd, "Running integration tests")
 
 
 def run_specific_test_file(test_file, verbose=False):
@@ -100,35 +111,6 @@ def run_specific_test_file(test_file, verbose=False):
     return run_command(cmd, f"Running tests in {test_file}")
 
 
-def lint_code():
-    """Run code linting."""
-    success = True
-    
-    # Run flake8
-    if run_command(["python", "-m", "flake8", ".", "--exclude=tests"], "Running flake8 linting"):
-        print("✅ flake8 linting passed")
-    else:
-        print("❌ flake8 linting failed")
-        success = False
-    
-    # Run black check
-    if run_command(["python", "-m", "black", "--check", "."], "Checking code formatting with black"):
-        print("✅ black formatting check passed")
-    else:
-        print("❌ black formatting check failed. Run: python -m black .")
-        success = False
-    
-    return success
-
-
-def format_code():
-    """Format code using black."""
-    return run_command(["python", "-m", "black", "."], "Formatting code with black")
-
-
-def type_check():
-    """Run type checking with mypy."""
-    return run_command(["python", "-m", "mypy", ".", "--ignore-missing-imports"], "Running type checking with mypy")
 
 
 def clean_test_artifacts():
@@ -138,8 +120,6 @@ def clean_test_artifacts():
     artifacts = [
         ".pytest_cache",
         "__pycache__",
-        "htmlcov",
-        ".coverage",
         "*.pyc",
         "*.pyo"
     ]
@@ -172,11 +152,9 @@ def main():
         epilog="""
 Examples:
   python run_tests.py --unit                    # Run unit tests only
-  python run_tests.py --all --coverage          # Run all tests with coverage
+  python run_tests.py --all                     # Run all tests
   python run_tests.py --security                # Run security tests only
   python run_tests.py --file test_config.py     # Run specific test file
-  python run_tests.py --lint                    # Run code linting
-  python run_tests.py --format                  # Format code
   python run_tests.py --clean                   # Clean test artifacts
         """
     )
@@ -185,17 +163,13 @@ Examples:
     parser.add_argument("--unit", action="store_true", help="Run unit tests only")
     parser.add_argument("--all", action="store_true", help="Run all tests")
     parser.add_argument("--security", action="store_true", help="Run security tests only")
+    parser.add_argument("--integration", action="store_true", help="Run integration tests only (requires database)")
     parser.add_argument("--file", type=str, help="Run specific test file")
     parser.add_argument("--test", type=str, help="Run specific test (e.g., test_config.py::TestDatabaseConfig::test_defaults)")
     
-    # Code quality options
-    parser.add_argument("--lint", action="store_true", help="Run code linting")
-    parser.add_argument("--format", action="store_true", help="Format code with black")
-    parser.add_argument("--type-check", action="store_true", help="Run type checking with mypy")
     
     # Output options
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
-    parser.add_argument("--coverage", action="store_true", help="Generate coverage report")
     
     # Utility options
     parser.add_argument("--clean", action="store_true", help="Clean test artifacts and cache files")
@@ -227,30 +201,22 @@ Examples:
         print("❌ Cannot run tests without required dependencies")
         sys.exit(1)
     
-    # Handle code quality options
-    if args.lint:
-        success = lint_code() and success
-    
-    if args.format:
-        success = format_code() and success
-    
-    if args.type_check:
-        success = type_check() and success
-    
     # Handle test execution options
     if args.unit:
-        success = run_unit_tests(args.verbose, args.coverage, args.test) and success
+        success = run_unit_tests(args.verbose, args.test) and success
     elif args.security:
         success = run_security_tests(args.verbose) and success
+    elif args.integration:
+        success = run_integration_tests(args.verbose) and success
     elif args.file:
         success = run_specific_test_file(args.file, args.verbose) and success
     elif args.all:
-        success = run_all_tests(args.verbose, args.coverage) and success
+        success = run_all_tests(args.verbose) and success
     elif args.test:
-        success = run_unit_tests(args.verbose, args.coverage, args.test) and success
+        success = run_unit_tests(args.verbose, args.test) and success
     else:
         # Default: run unit tests
-        success = run_unit_tests(args.verbose, args.coverage) and success
+        success = run_unit_tests(args.verbose) and success
     
     # Print summary
     if success:

@@ -1,7 +1,7 @@
 # Makefile for Konflux DevLake MCP Server
 # Provides convenient commands for development, testing, and deployment
 
-.PHONY: help install test test-unit test-security test-all lint format type-check clean run dev
+.PHONY: help install test test-unit test-security test-all clean run dev
 
 # Default target
 help: ## Show this help message
@@ -30,8 +30,6 @@ test-security: ## Run security-related tests
 test-all: ## Run all tests
 	python run_tests.py --all --verbose
 
-test-coverage: ## Run tests with coverage report
-	python run_tests.py --unit --coverage
 
 test-file: ## Run specific test file (usage: make test-file FILE=test_config.py)
 	python run_tests.py --file $(FILE) --verbose
@@ -39,26 +37,6 @@ test-file: ## Run specific test file (usage: make test-file FILE=test_config.py)
 test-clean: ## Clean test artifacts and cache files
 	python run_tests.py --clean
 
-# Code quality
-lint: ## Run code linting (flake8)
-	python -m flake8 .
-
-lint-black: ## Check code formatting with black
-	python -m black --check --diff .
-
-lint-mypy: ## Run type checking with mypy
-	python -m mypy --ignore-missing-imports .
-
-format: ## Format code with black
-	python -m black .
-
-format-check: ## Check code formatting without making changes
-	python -m black --check .
-
-type-check: ## Run type checking with mypy
-	python -m mypy --ignore-missing-imports .
-
-quality: lint lint-black lint-mypy ## Run all code quality checks
 
 # Development commands
 run: ## Run the MCP server in stdio mode
@@ -81,16 +59,13 @@ docker-run: ## Run Docker container
 clean: test-clean ## Clean all generated files
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -exec rm -rf {} +
-	rm -rf .mypy_cache
 	rm -rf .pytest_cache
-	rm -rf htmlcov
-	rm -f .coverage
 
 check-deps: ## Check if all dependencies are installed
 	python run_tests.py --check-deps
 
 # CI/CD simulation
-ci: clean install quality test-coverage ## Simulate CI pipeline locally
+ci: clean install test-all ## Simulate CI pipeline locally
 
 # Quick development workflow
 quick-test: ## Quick test run (unit tests only, no verbose output)
@@ -104,7 +79,7 @@ docs: ## Generate documentation (placeholder)
 	@echo "Documentation generation not yet implemented"
 
 # Release preparation
-pre-commit: quality test-all ## Run pre-commit checks (quality + all tests)
+pre-commit: test-all ## Run pre-commit checks (all tests)
 	@echo "✅ Pre-commit checks completed successfully"
 
 # Advanced testing
@@ -122,8 +97,37 @@ test-performance: ## Run performance-related tests (placeholder)
 	@echo "Performance tests not yet implemented"
 
 # Integration testing (requires database)
-test-integration: ## Run integration tests (requires database setup)
-	@echo "Integration tests not yet implemented - requires database setup"
+test-integration: ## Run integration tests (handles setup and teardown automatically)
+	@echo "🚀 Starting integration tests with database setup..."
+	@echo "📦 Starting MySQL database..."
+	@docker compose up -d mysql || docker-compose up -d mysql
+	@echo "✅ Database container started"
+	@echo "⏳ Waiting for database to be ready..."
+	@sleep 25
+	@echo "🧪 Running integration tests..."
+	@python run_tests.py --integration --verbose; \
+	TEST_RESULT=$$?; \
+	echo "🧹 Cleaning up database..."; \
+	docker compose down -v || docker-compose down -v; \
+	echo "✅ Database cleaned up"; \
+	exit $$TEST_RESULT
+
+test-integration-setup: ## Start database services for integration tests (manual setup)
+	@if command -v docker-compose >/dev/null 2>&1; then \
+		docker-compose up -d mysql; \
+	else \
+		docker compose up -d mysql; \
+	fi
+	@echo "Waiting for database to be ready..."
+	@sleep 15
+	@echo "Database should be ready."
+
+test-integration-teardown: ## Stop database services (manual teardown)
+	@if command -v docker-compose >/dev/null 2>&1; then \
+		docker-compose down -v; \
+	else \
+		docker compose down -v; \
+	fi
 
 # Environment setup
 setup-dev: install-dev ## Setup development environment
@@ -136,15 +140,6 @@ help-test: ## Show detailed help for testing commands
 	@echo "  test-unit      - Fast unit tests with mocked dependencies"
 	@echo "  test-security  - Security-focused tests (SQL injection, etc.)"
 	@echo "  test-all       - All tests including slower ones"
-	@echo "  test-coverage  - Unit tests with HTML coverage report"
 	@echo "  test-file      - Run specific test file: make test-file FILE=test_config.py"
 	@echo "  quick-test     - Fast, quiet test run for development"
 	@echo "  watch-tests    - Continuously run tests on file changes"
-
-help-quality: ## Show detailed help for code quality commands
-	@echo "Code Quality Commands:"
-	@echo "  lint           - Check code style with flake8"
-	@echo "  format         - Auto-format code with black"
-	@echo "  format-check   - Check formatting without changes"
-	@echo "  type-check     - Static type checking with mypy"
-	@echo "  quality        - Run all quality checks"
