@@ -37,7 +37,7 @@ test-integration:
 	echo "✅ Database cleaned up"; \
 	exit $$TEST_RESULT
 
-test-e2e:
+test-e2e: ## Run E2E tests with LLM integration
 	@echo "🤖 Running LLM E2E tests..."
 	@echo "   Models: $${E2E_TEST_MODELS:-gemini/gemini-2.5-pro,gpt-4o,claude-3-5-sonnet-20240620}"
 	@if [ -z "$$OPENAI_API_KEY" ] && [ -z "$$ANTHROPIC_API_KEY" ] && [ -z "$$GEMINI_API_KEY" ]; then \
@@ -60,7 +60,7 @@ test-e2e:
 	echo "✅ Database cleaned up"; \
 	exit $$TEST_RESULT
 
-test-all:
+test-all: ## Run ALL tests (unit + security + integration with auto database setup)
 	@echo "🚀 Running comprehensive test suite (unit + security + integration)..."
 	@echo "📦 Starting MySQL database..."
 	@docker compose up -d mysql || docker-compose up -d mysql
@@ -120,7 +120,9 @@ check-deps:
 	python run_tests.py --check-deps
 
 # CI/CD simulation
-ci: clean install test-all ## Simulate CI pipeline locally
+ci-quick: clean install test-unit test-security ## Quick CI check (unit + security, no database)
+
+ci: clean install test-all ## Full CI pipeline (all tests with database)
 
 # Quick development workflow
 quick-test: ## Quick test run (unit tests only, no verbose output)
