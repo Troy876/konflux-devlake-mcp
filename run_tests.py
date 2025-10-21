@@ -67,6 +67,8 @@ def run_unit_tests(verbose=False, specific_test=None):
     return run_command(cmd, "Running unit tests")
 
 
+
+
 def run_all_tests(verbose=False):
     """Run all tests."""
     cmd = ["python", "-m", "pytest"]
@@ -154,6 +156,7 @@ Examples:
   python run_tests.py --unit                    # Run unit tests only
   python run_tests.py --all                     # Run all tests
   python run_tests.py --security                # Run security tests only
+  python run_tests.py --integration             # Run integration tests (requires database)
   python run_tests.py --file test_config.py     # Run specific test file
   python run_tests.py --clean                   # Clean test artifacts
         """

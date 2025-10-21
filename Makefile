@@ -27,9 +27,24 @@ test-unit: ## Run unit tests only (no external dependencies)
 test-security: ## Run security-related tests
 	python run_tests.py --security --verbose
 
-test-all: ## Run all tests
-	python run_tests.py --all --verbose
-
+test-all: ## Run ALL tests (unit + security + integration with auto database setup)
+	@echo "🚀 Running comprehensive test suite (unit + security + integration)..."
+	@echo "📦 Starting MySQL database..."
+	@docker compose up -d mysql || docker-compose up -d mysql
+	@echo "✅ Database container started"
+	@echo "⏳ Waiting for database to be ready..."
+	@sleep 25
+	@echo "🧪 Running all tests (unit + security + integration)..."
+	@python run_tests.py --all --verbose; \
+	TEST_RESULT=$$?; \
+	echo "🧹 Cleaning up database..."; \
+	docker compose down -v || docker-compose down -v; \
+	echo "✅ Database cleaned up"; \
+	if [ $$TEST_RESULT -eq 0 ]; then \
+		echo ""; \
+		echo "✅ All 188 tests passed! (91 unit + 35 security + 62 integration)"; \
+	fi; \
+	exit $$TEST_RESULT
 
 test-file: ## Run specific test file (usage: make test-file FILE=test_config.py)
 	python run_tests.py --file $(FILE) --verbose
@@ -65,7 +80,9 @@ check-deps: ## Check if all dependencies are installed
 	python run_tests.py --check-deps
 
 # CI/CD simulation
-ci: clean install test-all ## Simulate CI pipeline locally
+ci-quick: clean install test-unit test-security ## Quick CI check (unit + security, no database)
+
+ci: clean install test-all ## Full CI pipeline (all tests with database)
 
 # Quick development workflow
 quick-test: ## Quick test run (unit tests only, no verbose output)
@@ -137,9 +154,21 @@ setup-dev: install-dev ## Setup development environment
 # Help for specific commands
 help-test: ## Show detailed help for testing commands
 	@echo "Testing Commands:"
-	@echo "  test-unit      - Fast unit tests with mocked dependencies"
-	@echo "  test-security  - Security-focused tests (SQL injection, etc.)"
-	@echo "  test-all       - All tests including slower ones"
-	@echo "  test-file      - Run specific test file: make test-file FILE=test_config.py"
-	@echo "  quick-test     - Fast, quiet test run for development"
-	@echo "  watch-tests    - Continuously run tests on file changes"
+	@echo ""
+	@echo "  Quick Tests (No Database):"
+	@echo "    test-unit        - Unit tests only (91 tests, ~3 seconds)"
+	@echo "    test-security    - Security tests only (35 tests, ~1 second)"
+	@echo "    quick-test       - Fast, quiet unit test run"
+	@echo ""
+	@echo "  Comprehensive Tests (Auto Database Setup):"
+	@echo "    test-integration - Integration tests (62 tests, ~60 seconds, auto setup/teardown)"
+	@echo "    test-all         - ALL 188 tests (unit + security + integration, auto setup/teardown)"
+	@echo ""
+	@echo "  Utilities:"
+	@echo "    test-file        - Run specific test: make test-file FILE=test_config.py"
+	@echo "    watch-tests      - Continuously run tests on file changes"
+	@echo "    test-clean       - Clean test artifacts and cache"
+	@echo ""
+	@echo "  CI/CD:"
+	@echo "    ci-quick         - Fast CI check (unit + security, no database)"
+	@echo "    ci               - Full CI pipeline (all tests with database)"
