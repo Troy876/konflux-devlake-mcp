@@ -67,6 +67,26 @@ def run_unit_tests(verbose=False, specific_test=None):
     return run_command(cmd, "Running unit tests")
 
 
+def run_mock_tests(verbose=False, test_type=None):
+    """Run comprehensive mock tests."""
+    print("🎭 Running mock tests...")
+    print("ℹ️  Mock tests simulate external dependencies and API calls.")
+    
+    if test_type == "database":
+        cmd = ["python", "-m", "pytest", "tests/mocks/test_database_mocks.py", "-m", "unit"]
+        description = "Running database mock tests"
+    elif test_type == "tools":
+        cmd = ["python", "-m", "pytest", "tests/mocks/test_tools_mocks.py", "-m", "unit"]
+        description = "Running tools mock tests"
+    else:
+        # Run all mock tests
+        cmd = ["python", "-m", "pytest", "tests/mocks/", "-m", "unit"]
+        description = "Running all mock tests"
+    
+    if verbose:
+        cmd.extend(["-v", "-s"])
+    
+    return run_command(cmd, description)
 
 def run_all_tests(verbose=False):
     """Run all tests."""
@@ -155,6 +175,9 @@ Examples:
   python run_tests.py --all                     # Run all tests
   python run_tests.py --security                # Run security tests only
   python run_tests.py --integration             # Run integration tests (requires database)
+  python run_tests.py --mock                    # Run all mock tests
+  python run_tests.py --mock-type database      # Run database mock tests
+  python run_tests.py --mock-type tools         # Run tools mock tests
   python run_tests.py --file test_config.py     # Run specific test file
   python run_tests.py --clean                   # Clean test artifacts
         """
@@ -164,6 +187,9 @@ Examples:
     parser.add_argument("--all", action="store_true", help="Run all tests")
     parser.add_argument("--security", action="store_true", help="Run security tests only")
     parser.add_argument("--integration", action="store_true", help="Run integration tests only (requires database)")
+    parser.add_argument("--mock", action="store_true", help="Run all mock tests")
+    parser.add_argument("--mock-type", choices=["database", "tools"], 
+                       help="Run specific type of mock tests")
     parser.add_argument("--file", type=str, help="Run specific test file")
     parser.add_argument("--test", type=str, help="Run specific test (e.g., test_config.py::TestDatabaseConfig::test_defaults)")
     
@@ -203,6 +229,10 @@ Examples:
         success = run_security_tests(args.verbose) and success
     elif args.integration:
         success = run_integration_tests(args.verbose) and success
+    elif args.mock:
+        success = run_mock_tests(args.verbose, args.mock_type) and success
+    elif args.mock_type:
+        success = run_mock_tests(args.verbose, args.mock_type) and success
     elif args.file:
         success = run_specific_test_file(args.file, args.verbose) and success
     elif args.all:
