@@ -380,26 +380,35 @@ class DataMasking:
         
         return masked_data
     
-    def mask_database_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """Mask sensitive data in database result"""
-        if not result:
+    def mask_database_result(self, result: Any) -> Any:
+        """Mask sensitive data in database result.
+        Supports dict, list, and primitive values.
+        """
+        if result is None:
             return result
-        
-        masked_result = {}
-        
-        for key, value in result.items():
-            if isinstance(value, str):
-                masked_result[key] = self.mask_sensitive_data(value)
-            elif isinstance(value, dict):
-                masked_result[key] = self.mask_database_result(value)
-            elif isinstance(value, list):
-                masked_result[key] = [
-                    self.mask_database_result(item) if isinstance(item, dict)
-                    else self.mask_sensitive_data(str(item)) if isinstance(item, str)
-                    else item
-                    for item in value
-                ]
-            else:
-                masked_result[key] = value
-        
-        return masked_result 
+
+        # If the whole result is a list, mask each element
+        if isinstance(result, list):
+            return [
+                self.mask_database_result(item) if isinstance(item, (dict, list))
+                else self.mask_sensitive_data(item) if isinstance(item, str)
+                else item
+                for item in result
+            ]
+
+        # If the whole result is a dict, mask per key
+        if isinstance(result, dict):
+            masked_result: Dict[str, Any] = {}
+            for key, value in result.items():
+                if isinstance(value, str):
+                    masked_result[key] = self.mask_sensitive_data(value)
+                elif isinstance(value, (dict, list)):
+                    masked_result[key] = self.mask_database_result(value)
+                else:
+                    masked_result[key] = value
+            return masked_result
+
+        # Primitive: return masked if string else as-is
+        if isinstance(result, str):
+            return self.mask_sensitive_data(result)
+        return result

@@ -1,0 +1,111 @@
+name: MCP E2E Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      test_models:
+        description: "Comma-separated models (e.g. gemini/gemini-2.5-pro,gpt-4o,claude-3-5-sonnet-20240620)"
+        required: false
+        default: "gemini/gemini-2.5-pro,gpt-4o,claude-3-5-sonnet-20240620"
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-llm:
+    name: LLM E2E (${{ matrix.model }})
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - model: gemini/gemini-2.5-pro
+            require_secret: GEMINI_API_KEY
+          - model: gpt-4o
+            require_secret: OPENAI_API_KEY
+          - model: claude-3-5-sonnet-20240620
+            require_secret: ANTHROPIC_API_KEY
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test_password
+          MYSQL_DATABASE: lake
+          MYSQL_USER: devlake
+          MYSQL_PASSWORD: devlake_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u root -ptest_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+          --tmpfs /var/lib/mysql:rw,noexec,nosuid,size=1024m
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure required secret is present for model
+        shell: bash
+        run: |
+          REQ=${{ matrix.require_secret }}
+          if [ -n "$REQ" ]; then
+            if [ "$REQ" = "OPENAI_API_KEY" ] && [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+              echo "Missing OPENAI_API_KEY for model ${{ matrix.model }}"; exit 1; fi
+            if [ "$REQ" = "ANTHROPIC_API_KEY" ] && [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+              echo "Missing ANTHROPIC_API_KEY for model ${{ matrix.model }}"; exit 1; fi
+            if [ "$REQ" = "GEMINI_API_KEY" ] && [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
+              echo "Missing GEMINI_API_KEY for model ${{ matrix.model }}"; exit 1; fi
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Wait for MySQL to be ready
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h"127.0.0.1" -P3306 -uroot -ptest_password --silent; then
+              echo "MySQL is ready!"; break; fi
+            echo "Waiting for MySQL... ($i/30)"; sleep 2;
+          done
+
+      - name: Initialize test database schema and data
+        run: |
+          mysql -h127.0.0.1 -P3306 -uroot -ptest_password < testdata/mysql/01-schema.sql
+          mysql -h127.0.0.1 -P3306 -uroot -ptest_password < testdata/mysql/02-test-data.sql
+
+      - name: Run LLM E2E tests for model
+        env:
+          TEST_DB_HOST: 127.0.0.1
+          TEST_DB_PORT: 3306
+          TEST_DB_USER: devlake
+          TEST_DB_PASSWORD: devlake_password
+          TEST_DB_NAME: lake
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          E2E_TEST_MODELS: ${{ matrix.model }}
+        run: |
+          pytest tests/e2e -vv --maxfail=1 --tb=short
+
+      - name: Summarize E2E results
+        if: always()
+        run: |
+          echo "## 🤖 LLM E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Model**: ${{ matrix.model }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Suite**: Database, Incidents, Deployments (outcome-based assertions)" >> $GITHUB_STEP_SUMMARY

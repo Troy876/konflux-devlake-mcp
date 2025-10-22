@@ -33,7 +33,7 @@ test-all: ## Run ALL tests (unit + security + integration with auto database set
 	@docker compose up -d mysql || docker-compose up -d mysql
 	@echo "✅ Database container started"
 	@echo "⏳ Waiting for database to be ready..."
-	@sleep 25
+	@sleep 35
 	@echo "🧪 Running all tests (unit + security + integration)..."
 	@python run_tests.py --all --verbose; \
 	TEST_RESULT=$$?; \
@@ -69,6 +69,34 @@ docker-build: ## Build Docker image
 
 docker-run: ## Run Docker container
 	docker run -p 3000:3000 konflux-devlake-mcp
+
+# Local HTTP server for tests (run separately from tests)
+.PHONY: serve-http-test stop-http-test
+serve-http-test: ## Start MCP server (HTTP) on 127.0.0.1:8765 using local MySQL
+	@echo "🚀 Starting MCP server (HTTP) at http://127.0.0.1:8765 ..."
+	@nohup python konflux-devlake-mcp.py \
+		--transport http --host 127.0.0.1 --port 8765 \
+		--db-host localhost --db-port 3306 \
+		--db-user devlake --db-password devlake_password \
+		--db-database lake --log-level ERROR \
+		> server.http.log 2>&1 & echo $$! > server.http.pid
+	@printf "⏳ Waiting for port 8765 to open"; \
+	for i in $$(seq 1 30); do \
+		python -c 'import socket; s=socket.socket(); \
+				import sys; \
+				(sys.exit(0) if not s.connect_ex(("127.0.0.1",8765)) else sys.exit(1))' \
+		&& { echo " ✓"; break; } \
+		|| { printf "."; sleep 1; }; \
+	done; echo
+
+stop-http-test: ## Stop MCP server started by serve-http-test
+	@if [ -f server.http.pid ]; then \
+		kill `cat server.http.pid` 2>/dev/null || true; \
+		rm -f server.http.pid; \
+		echo "🛑 Stopped MCP server"; \
+	else \
+		echo "No server.http.pid found"; \
+	fi
 
 # Utility commands
 clean: test-clean ## Clean all generated files
@@ -129,6 +157,36 @@ test-integration: ## Run integration tests (handles setup and teardown automatic
 	echo "✅ Database cleaned up"; \
 	exit $$TEST_RESULT
 
+test-e2e: ## Run LLM E2E tests (requires API keys; models via E2E_TEST_MODELS)
+	@echo "🤖 Running LLM E2E tests..."
+	@echo "   Models: $${E2E_TEST_MODELS:-gemini/gemini-2.5-pro,gpt-4o,claude-3-5-sonnet-20240620}"
+	@docker compose up -d mysql || docker-compose up -d mysql
+	@echo "✅ Database container started"
+	@echo "⏳ Waiting for database to be ready..."
+	@sleep 25
+	@echo "🧪 Initializing database (via container mysql client)..."
+	@docker compose exec -T mysql mysql -uroot -ptest_password -e "DROP DATABASE IF EXISTS lake; CREATE DATABASE lake;"
+	@docker compose exec -T mysql mysql -uroot -ptest_password lake < testdata/mysql/01-schema.sql
+	@docker compose exec -T mysql mysql -uroot -ptest_password lake < testdata/mysql/02-test-data.sql
+	@echo "🧪 Running tests (stdio by default)..."
+	@LITELLM_LOGGING=0 LITELLM_DISABLE_LOGGING=1 LITELLM_VERBOSE=0 LITELLM_LOGGING_QUEUE=0 pytest tests/e2e -vv --maxfail=1 --tb=short; \
+	TEST_RESULT=$$?; \
+	echo "🧹 Cleaning up database..."; \
+	docker compose down -v || docker-compose down -v; \
+	echo "✅ Database cleaned up"; \
+	exit $$TEST_RESULT
+
+.PHONY: test-e2e-http
+test-e2e-http: ## Run E2E tests with external HTTP server (set MCP_URL). Start server separately.
+	@echo "🤖 Running LLM E2E tests against external HTTP server at $${MCP_URL:-http://127.0.0.1:8765}..."
+	@docker compose up -d mysql || docker-compose up -d mysql
+	@sleep 20
+	@docker compose exec -T mysql mysql -uroot -ptest_password -e "DROP DATABASE IF EXISTS lake; CREATE DATABASE lake;"
+	@docker compose exec -T mysql mysql -uroot -ptest_password lake < testdata/mysql/01-schema.sql
+	@docker compose exec -T mysql mysql -uroot -ptest_password lake < testdata/mysql/02-test-data.sql
+	@echo "🧪 Running tests (HTTP transport)..."
+	@LITELLM_LOGGING=0 LITELLM_DISABLE_LOGGING=1 LITELLM_VERBOSE=0 LITELLM_LOGGING_QUEUE=0 MCP_TRANSPORT=http MCP_URL=$${MCP_URL:-http://127.0.0.1:8765} pytest tests/e2e -vv --maxfail=1 --tb=short
+
 test-integration-setup: ## Start database services for integration tests (manual setup)
 	@if command -v docker-compose >/dev/null 2>&1; then \
 		docker-compose up -d mysql; \
@@ -163,6 +221,13 @@ help-test: ## Show detailed help for testing commands
 	@echo "  Comprehensive Tests (Auto Database Setup):"
 	@echo "    test-integration - Integration tests (62 tests, ~60 seconds, auto setup/teardown)"
 	@echo "    test-all         - ALL 188 tests (unit + security + integration, auto setup/teardown)"
+	@echo ""
+	@echo "  E2E Tests (Requires LLM API Keys):"
+	@echo "    test-e2e         - E2E tests with LLM integration"
+	@echo "                       Default: gpt-4o, claude-3-5-sonnet-20240620"
+	@echo "                       Override: E2E_TEST_MODELS='gemini/gemini-2.5-pro'"
+	@echo "                       Note: Gemini requires 'gemini/' prefix"
+	@echo "                       Requires: API keys (OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY)"
 	@echo ""
 	@echo "  Utilities:"
 	@echo "    test-file        - Run specific test: make test-file FILE=test_config.py"

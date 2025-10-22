@@ -40,16 +40,22 @@ def _setup_logging() -> logging.Logger:
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     
+    # Determine log level from environment (default INFO)
+    env_level = os.getenv("LOG_LEVEL", "INFO").upper()
+    level = getattr(logging, env_level, logging.INFO)
+
     # Create root logger
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(level)
     
     # Clear existing handlers
     root_logger.handlers.clear()
     
-    # Console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
+    # Console handler: write to stderr to avoid interfering with STDIO JSONRPC
+    # In STDIO transport, further restrict to ERROR to minimize noise
+    is_stdio = os.getenv("MCP_STDIO", "false").lower() in ("1", "true", "yes") or os.getenv("TRANSPORT", "").lower() == "stdio"
+    console_handler = logging.StreamHandler(sys.stderr)
+    console_handler.setLevel(logging.ERROR if is_stdio else level)
     console_handler.setFormatter(formatter)
     root_logger.addHandler(console_handler)
     
@@ -59,7 +65,7 @@ def _setup_logging() -> logging.Logger:
         maxBytes=10*1024*1024,  # 10MB
         backupCount=5
     )
-    file_handler.setLevel(logging.INFO)
+    file_handler.setLevel(level)
     file_handler.setFormatter(formatter)
     root_logger.addHandler(file_handler)
     
