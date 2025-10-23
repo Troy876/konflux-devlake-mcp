@@ -105,4 +105,4 @@ This MCP server is particularly useful for:
 - **DevOps Teams**: Monitor incidents and deployments through natural language queries
 - **AI Assistants**: Enable AI tools to access and analyze your DevLake data
 - **Business Intelligence**: Generate reports and insights from your DevLake database
-- **Development Teams**: Debug and analyze application performance data   
+- **Development Teams**: Debug and analyze application performance data    

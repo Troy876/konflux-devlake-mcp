@@ -60,14 +60,14 @@ test-e2e: ## Run E2E tests with LLM integration
 	echo "✅ Database cleaned up"; \
 	exit $$TEST_RESULT
 
-test-all: ## Run ALL tests (unit + security + integration with auto database setup)
+test-all: ## Run ALL tests (unit + security + integration + e2e)
 	@echo "🚀 Running comprehensive test suite (unit + security + integration)..."
 	@echo "📦 Starting MySQL database..."
 	@docker compose up -d mysql || docker-compose up -d mysql
 	@echo "✅ Database container started"
 	@echo "⏳ Waiting for database to be ready..."
 	@sleep 35
-	@echo "🧪 Running all tests..."
+	@echo "🧪 Running all tests (unit + security + integration)..."
 	@python run_tests.py --all --verbose; \
 	CORE_RESULT=$$?; \
 	echo "🧹 Cleaning up database..."; \
@@ -85,7 +85,7 @@ test-all: ## Run ALL tests (unit + security + integration with auto database set
 		exit $$E2E_RESULT; \
 	fi; \
 	echo ""; \
-	echo "✅ All tests passed"
+	echo "✅ All tests passed (core + e2e)"
 
 test-file:
 	python run_tests.py --file $(FILE) --verbose
@@ -109,6 +109,8 @@ docker-build: ## Build Docker image
 
 docker-run: ## Run Docker container
 	docker run -p 3000:3000 konflux-devlake-mcp
+
+ 
 
 # Utility commands
 clean: test-clean
@@ -155,6 +157,31 @@ test-performance: ## Run performance-related tests (placeholder)
 
 # Integration testing (requires database)
 # Note: This is a duplicate of the one above, keeping only the first one
+
+test-e2e: ## Run LLM E2E tests (requires API keys; models via E2E_TEST_MODELS)
+	@echo "🤖 Running LLM E2E tests..."
+	@echo "   Models: $${E2E_TEST_MODELS:-gemini/gemini-2.5-pro,gpt-4o,claude-3-5-sonnet-20240620}"
+	@if [ -z "$$OPENAI_API_KEY" ] && [ -z "$$ANTHROPIC_API_KEY" ] && [ -z "$$GEMINI_API_KEY" ]; then \
+		echo "❌ No LLM API keys set. Set at least one of OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY."; \
+		exit 1; \
+	fi
+	@docker compose up -d mysql || docker-compose up -d mysql
+	@echo "✅ Database container started"
+	@echo "⏳ Waiting for database to be ready..."
+	@sleep 25
+	@echo "🧪 Initializing database (via container mysql client)..."
+	@docker compose exec -T mysql mysql -uroot -ptest_password -e "DROP DATABASE IF EXISTS lake; CREATE DATABASE lake;"
+	@docker compose exec -T mysql mysql -uroot -ptest_password lake < testdata/mysql/01-schema.sql
+	@docker compose exec -T mysql mysql -uroot -ptest_password lake < testdata/mysql/02-test-data.sql
+	@echo "🧪 Running tests (stdio by default)..."
+	@LITELLM_LOGGING=0 LITELLM_DISABLE_LOGGING=1 LITELLM_VERBOSE=0 LITELLM_LOGGING_QUEUE=0 pytest tests/e2e -vv --maxfail=1 --tb=short; \
+	TEST_RESULT=$$?; \
+	echo "🧹 Cleaning up database..."; \
+	docker compose down -v || docker-compose down -v; \
+	echo "✅ Database cleaned up"; \
+	exit $$TEST_RESULT
+
+ 
 
 test-integration-setup: ## Start database services for integration tests (manual setup)
 	@if command -v docker-compose >/dev/null 2>&1; then \
