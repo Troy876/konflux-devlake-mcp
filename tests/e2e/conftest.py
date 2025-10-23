@@ -5,7 +5,6 @@ import pytest
 import socket
 import time
 from mcp.client.stdio import stdio_client
-from mcp.client.streamable_http import streamablehttp_client
 from mcp import ClientSession, StdioServerParameters
 
 # Ensure LiteLLM background logging is disabled to avoid cross-event-loop queue errors between tests
@@ -61,26 +60,7 @@ def db_env():
 
 
 @pytest.fixture
-def mcp_transport():
-    return os.environ.get("MCP_TRANSPORT", "stdio")
-
-
-@pytest.fixture
-def mcp_url():
-    return os.environ.get("MCP_URL", "http://127.0.0.1:8765")
-
-
-@pytest.fixture
-async def mcp_client(db_env, mcp_transport, mcp_url):
-    if mcp_transport in ("http", "streamable-http"):
-        # Assume server is already running externally
-        url = mcp_url.rstrip("/") + "/mcp"
-        async with streamablehttp_client(url) as (read, write, _):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                yield session
-        return
-
+async def mcp_client(db_env):
     # Ensure DB is reachable to avoid long LLM/tool retries that look like hangs
     host = db_env["DB_HOST"]
     port = int(db_env["DB_PORT"])

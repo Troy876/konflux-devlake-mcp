@@ -50,6 +50,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install MySQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
+
       - name: Ensure required secret is present for model
         shell: bash
         run: |
@@ -84,8 +89,9 @@ jobs:
 
       - name: Initialize test database schema and data
         run: |
-          mysql -h127.0.0.1 -P3306 -uroot -ptest_password < testdata/mysql/01-schema.sql
-          mysql -h127.0.0.1 -P3306 -uroot -ptest_password < testdata/mysql/02-test-data.sql
+          mysql -h127.0.0.1 -P3306 -uroot -ptest_password -e "DROP DATABASE IF EXISTS lake; CREATE DATABASE lake;"
+          mysql -h127.0.0.1 -P3306 -uroot -ptest_password lake < testdata/mysql/01-schema.sql
+          mysql -h127.0.0.1 -P3306 -uroot -ptest_password lake < testdata/mysql/02-test-data.sql
 
       - name: Run LLM E2E tests for model
         env:
@@ -94,6 +100,13 @@ jobs:
           TEST_DB_USER: devlake
           TEST_DB_PASSWORD: devlake_password
           TEST_DB_NAME: lake
+          # Silence LiteLLM background logging worker to avoid cross-loop issues
+          LITELLM_LOGGING: "0"
+          LITELLM_DISABLE_LOGGING: "1"
+          LITELLM_VERBOSE: "0"
+          LITELLM_LOGGING_QUEUE: "0"
+          # Give DB a little extra time if needed
+          E2E_DB_WAIT_SECS: "45"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
