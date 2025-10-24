@@ -27,7 +27,7 @@ test-unit: ## Run unit tests only (no external dependencies)
 test-security: ## Run security-related tests
 	python run_tests.py --security --verbose
 
-test-all: ## Run ALL tests (unit + security + integration with auto database setup)
+test-all: ## Run ALL tests (unit + security + integration + e2e)
 	@echo "🚀 Running comprehensive test suite (unit + security + integration)..."
 	@echo "📦 Starting MySQL database..."
 	@docker compose up -d mysql || docker-compose up -d mysql
@@ -36,15 +36,23 @@ test-all: ## Run ALL tests (unit + security + integration with auto database set
 	@sleep 35
 	@echo "🧪 Running all tests (unit + security + integration)..."
 	@python run_tests.py --all --verbose; \
-	TEST_RESULT=$$?; \
+	CORE_RESULT=$$?; \
 	echo "🧹 Cleaning up database..."; \
 	docker compose down -v || docker-compose down -v; \
 	echo "✅ Database cleaned up"; \
-	if [ $$TEST_RESULT -eq 0 ]; then \
-		echo ""; \
-		echo "✅ All 188 tests passed! (91 unit + 35 security + 62 integration)"; \
+	if [ $$CORE_RESULT -ne 0 ]; then \
+		echo "❌ Core tests failed"; \
+		exit $$CORE_RESULT; \
 	fi; \
-	exit $$TEST_RESULT
+	echo "🤖 Running LLM E2E tests..."; \
+	$(MAKE) --no-print-directory test-e2e; \
+	E2E_RESULT=$$?; \
+	if [ $$E2E_RESULT -ne 0 ]; then \
+		echo "❌ E2E tests failed"; \
+		exit $$E2E_RESULT; \
+	fi; \
+	echo ""; \
+	echo "✅ All tests passed (core + e2e)"
 
 test-file: ## Run specific test file (usage: make test-file FILE=test_config.py)
 	python run_tests.py --file $(FILE) --verbose
@@ -134,6 +142,10 @@ test-integration: ## Run integration tests (handles setup and teardown automatic
 test-e2e: ## Run LLM E2E tests (requires API keys; models via E2E_TEST_MODELS)
 	@echo "🤖 Running LLM E2E tests..."
 	@echo "   Models: $${E2E_TEST_MODELS:-gemini/gemini-2.5-pro,gpt-4o,claude-3-5-sonnet-20240620}"
+	@if [ -z "$$OPENAI_API_KEY" ] && [ -z "$$ANTHROPIC_API_KEY" ] && [ -z "$$GEMINI_API_KEY" ]; then \
+		echo "❌ No LLM API keys set. Set at least one of OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY."; \
+		exit 1; \
+	fi
 	@docker compose up -d mysql || docker-compose up -d mysql
 	@echo "✅ Database container started"
 	@echo "⏳ Waiting for database to be ready..."

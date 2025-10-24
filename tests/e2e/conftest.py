@@ -14,7 +14,15 @@ os.environ.setdefault("LITELLM_VERBOSE", "0")
 os.environ.setdefault("LITELLM_DISABLE_LOGGING", "1")
 os.environ.setdefault("LITELLM_LOGGING_QUEUE", "0")
 
-requested_models = [m.strip() for m in os.environ.get("E2E_TEST_MODELS", "gpt-4o,claude-3-5-sonnet-20240620").split(",") if m.strip()]
+def _present_models_from_env() -> list:
+    present = []
+    if os.environ.get("GEMINI_API_KEY"):
+        present.append("gemini/gemini-2.5-pro")
+    if os.environ.get("OPENAI_API_KEY"):
+        present.append("gpt-4o")
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        present.append("claude-3-5-sonnet-20240620")
+    return present
 
 def _has_api_key_for_model(model_name: str) -> bool:
     name = model_name.lower()
@@ -22,11 +30,20 @@ def _has_api_key_for_model(model_name: str) -> bool:
         return bool(os.environ.get("GEMINI_API_KEY"))
     if "claude" in name:
         return bool(os.environ.get("ANTHROPIC_API_KEY"))
-    # default to OpenAI for gpt/* models
     return bool(os.environ.get("OPENAI_API_KEY"))
 
-# Filter out models without corresponding API keys to prevent auth errors locally
-models = [m for m in requested_models if _has_api_key_for_model(m)]
+_requested_env = os.environ.get("E2E_TEST_MODELS", "").strip()
+if _requested_env:
+    requested_models = [m.strip() for m in _requested_env.split(",") if m.strip()]
+    models = [m for m in requested_models if _has_api_key_for_model(m)]
+    if not models:
+        pytest.exit("E2E_TEST_MODELS is set but no matching API keys found. Set the appropriate key or unset E2E_TEST_MODELS for auto-selection.")
+else:
+    present = _present_models_from_env()
+    if not present:
+        pytest.exit("No LLM API keys found. Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY to run E2E tests.")
+    # Auto-select: if only one present, run just that; if multiple present, run all present
+    models = present
 
 pytestmark = pytest.mark.anyio
 
