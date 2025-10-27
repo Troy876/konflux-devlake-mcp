@@ -58,7 +58,7 @@ class HttpTransport(BaseTransport):
             self._session_manager = StreamableHTTPSessionManager(
                 app=server,
                 json_response=True,
-                stateless=False  # Changed to False to maintain session state
+                stateless=True  # Changed to True to avoid session issues
             )
             
             # Create health check endpoints
@@ -133,9 +133,10 @@ class HttpTransport(BaseTransport):
                     
                     if path == "/mcp" or path.startswith("/mcp/"):
                         try:
+                            self.logger.debug(f"Handling MCP request: {path}")
                             await self._session_manager.handle_request(scope, receive, send)
                         except Exception as e:
-                            self.logger.warning(f"MCP request handling error: {e}")
+                            self.logger.error(f"MCP request handling error: {e}")
                             # Return error response instead of crashing
                             response = Response(
                                 json.dumps({"error": "Internal server error", "details": str(e)}),

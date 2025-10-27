@@ -1,0 +1,47 @@
+graph TB
+    subgraph "Kubernetes Cluster"
+        subgraph "Namespace: konflux-devlake"
+            subgraph "Application Pods"
+                POD1[MCP Server Pod<br/>Konflux DevLake]
+            end
+            
+            subgraph "Network"
+                SVC[Service<br/>Port 3000]
+                ROUTE[Route<br/>External Access]
+            end
+            
+            subgraph "Configuration"
+                CM[ConfigMap<br/>App Config]
+                SECRET[Secret<br/>Database Credentials]
+                SA[ServiceAccount<br/>RBAC]
+            end
+        end
+        
+        subgraph "Database Layer"
+            EXT_DB[(External MySQL<br/>DevLake Database)]
+        end
+    end
+
+    subgraph "External Services"
+        CLIENT[AI Assistants<br/>Users]
+        CI[CI/CD Pipelines]
+    end
+
+    CLIENT -->|HTTPS| ROUTE
+    CI -->|Internal| ROUTE
+    ROUTE --> SVC
+    SVC --> POD1
+    POD1 -.->|Read Config| CM
+    POD1 -.->|Read Creds| SECRET
+    POD1 -.->|Uses Identity| SA
+    POD1 -->|Connect| EXT_DB
+    EXT_DB -->|Results| POD1
+    POD1 -->|Response| SVC
+    SVC --> ROUTE
+    ROUTE --> CLIENT
+
+    style POD1 fill:#e8f5e9
+    style SECRET fill:#ffebee
+    style EXT_DB fill:#f3e5f5
+    style CLIENT fill:#e1f5ff
+

@@ -83,19 +83,18 @@ class DatabaseTools(BaseTool):
                     "required": ["database", "table"]
                 }
             ),
-            # !TODO: Re-enable this tool when we have a way to generate queries from natural language with Gemini or any other LLM
-            # Tool(
-            #     name="execute_query",
-            #     description="⚠️ **ADVANCED SQL Query Tool** - Executes custom SQL queries against the Konflux DevLake database. ⚠️ **WARNING: This tool allows arbitrary SQL execution and should be used with extreme caution.** Only use this tool when other specialized tools cannot meet your needs. This tool supports SELECT queries with filtering, aggregation, joins, and advanced SQL features. Use this for custom analysis, reporting, and data exploration. Example queries: 'SELECT * FROM lake.incidents WHERE status = \"DONE\"', 'SELECT COUNT(*) FROM lake.cicd_deployments WHERE environment = \"PRODUCTION\"'. ⚠️ **SECURITY NOTE: Always validate and sanitize your queries before execution.**",
-            #     inputSchema={
-            #         "type": "object",
-            #         "properties": {
-            #             "query": {"type": "string", "description": "SQL query to execute (e.g., 'SELECT * FROM lake.incidents LIMIT 10'). ⚠️ WARNING: Only use SELECT queries for safety."},
-            #             "limit": {"type": "integer", "description": "Maximum number of rows to return (default: 100, max: 1000)"}
-            #         },
-            #         "required": ["query"]
-            #     }
-            # )
+            Tool(
+                name="execute_query",
+                description="⚠️ **ADVANCED SQL Query Tool** - Executes custom SQL queries against the Konflux DevLake database. ⚠️ **WARNING: This tool allows arbitrary SQL execution and should be used with extreme caution.** Only use this tool when other specialized tools cannot meet your needs. This tool supports SELECT queries with filtering, aggregation, joins, and advanced SQL features. Use this for custom analysis, reporting, and data exploration. Example queries: 'SELECT * FROM lake.incidents WHERE status = \"DONE\"', 'SELECT COUNT(*) FROM lake.cicd_deployments WHERE environment = \"PRODUCTION\"'. ⚠️ **SECURITY NOTE: Always validate and sanitize your queries before execution.**",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "SQL query to execute (e.g., 'SELECT * FROM lake.incidents LIMIT 10'). ⚠️ WARNING: Only use SELECT queries for safety."},
+                        "limit": {"type": "integer", "description": "Maximum number of rows to return (default: 100, max: 1000)"}
+                    },
+                    "required": ["query"]
+                }
+            )
         ]
     
     async def call_tool(self, name: str, arguments: Dict[str, Any]) -> str:
@@ -122,9 +121,8 @@ class DatabaseTools(BaseTool):
                 result = await self._list_tables_tool(arguments)
             elif name == "get_table_schema":
                 result = await self._get_table_schema_tool(arguments)
-            # !TODO: Re-enable this tool when we have a way to generate queries from natural language with Gemini or any other LLM
-            # elif name == "execute_query":
-            #     result = await self._execute_query_tool(arguments)
+            elif name == "execute_query":
+                result = await self._execute_query_tool(arguments)
             else:
                 result = {
                     "success": False,
@@ -209,14 +207,17 @@ class DatabaseTools(BaseTool):
             # Enhanced security validation
             query_upper = query.strip().upper()
             
-            # Check for dangerous SQL operations
+            # Check for dangerous SQL operations (only as whole words)
             dangerous_keywords = [
                 "DROP", "DELETE", "UPDATE", "INSERT", "CREATE", "ALTER", 
                 "TRUNCATE", "GRANT", "REVOKE", "EXEC", "EXECUTE"
             ]
             
             for keyword in dangerous_keywords:
-                if keyword in query_upper:
+                # Use word boundaries to avoid false positives like "created_date"
+                import re
+                pattern = r'\b' + re.escape(keyword) + r'\b'
+                if re.search(pattern, query_upper):
                     return {
                         "success": False, 
                         "error": f"Query contains dangerous keyword '{keyword}'. Only SELECT queries are allowed for security reasons.",

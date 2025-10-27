@@ -2,7 +2,15 @@
 
 A MCP server that enables natural language querying of Konflux DevLake databases. This server acts as a bridge between AI assistants and your DevLake database, allowing you to ask questions in plain language and get structured data back.
 
+## 📚 Documentation
+
+- **[Full Architecture Documentation](./docs/ARCHITECTURE.md)** - Complete system architecture and design patterns
+- **[Documentation Index](./docs/README.md)** - Visual diagrams and documentation catalog
+- **[Architecture Diagrams](./docs/)** - System diagrams in Mermaid format
+
 ## Quick Start
+
+### Option 1: Python (Development)
 
 1. **Install dependencies**:
 ```bash
@@ -13,6 +21,33 @@ pip install -r requirements.txt
 
 ```bash
 python konflux-devlake-mcp.py --transport http --host 0.0.0.0 --port 3000 --db-host localhost --db-port 3306 --db-user root --db-password password --db-database lake
+```
+
+### Option 2: Docker (Production)
+
+1. **Build the Docker image**:
+```bash
+docker build -t konflux-devlake-mcp:latest .
+```
+
+2. **Run the container**:
+```bash
+docker run -d \
+  --name konflux-mcp-server \
+  -p 3000:3000 \
+  -e DB_HOST=your_db_host \
+  -e DB_PORT=3306 \
+  -e DB_USER=root \
+  -e DB_PASSWORD=your_password \
+  -e DB_DATABASE=lake \
+  -e LOG_LEVEL=INFO \
+  konflux-devlake-mcp:latest
+```
+
+3. **Push to registry (if needed)**:
+```bash
+docker tag konflux-devlake-mcp:latest quay.io/flacatus/mcp-lake:1.0.0
+docker push quay.io/flacatus/mcp-lake:1.0.0
 ```
 
 ## Configuration

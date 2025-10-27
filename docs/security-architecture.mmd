@@ -1,0 +1,45 @@
+graph TB
+    subgraph "Request Flow"
+        REQ[Incoming Request]
+    end
+    
+    subgraph "Security Layers"
+        L1[Input Validation]
+        L2[SQL Injection Detection]
+        L3[Query Validation]
+        L4[Resource Limits]
+    end
+    
+    subgraph "Security Checks"
+        CHECK1{SQL Keywords}
+        CHECK2{Pattern Match}
+        CHECK3{Query Type}
+        CHECK4{Length Valid}
+    end
+    
+    subgraph "Execution"
+        EXEC[Execute Query]
+        MASK[Data Masking]
+        RETURN[Return Results]
+    end
+
+    REQ --> L1
+    L1 --> L2
+    L2 --> CHECK1
+    CHECK1 -->|SELECT| CHECK2
+    CHECK1 -->|Dangerous| BLOCK1[Block Request]
+    CHECK2 -->|No Injection| CHECK3
+    CHECK2 -->|Injection| BLOCK2[SQL Injection Detected]
+    CHECK3 -->|SELECT Only| CHECK4
+    CHECK3 -->|Other Types| BLOCK3[Only SELECT Allowed]
+    CHECK4 -->|Under Limit| EXEC
+    CHECK4 -->|Too Long| BLOCK4[Query Too Long]
+    EXEC --> MASK
+    MASK --> RETURN
+
+    style BLOCK1 fill:#ffcdd2
+    style BLOCK2 fill:#ffcdd2
+    style BLOCK3 fill:#ffcdd2
+    style BLOCK4 fill:#ffcdd2
+    style EXEC fill:#c8e6c9
+

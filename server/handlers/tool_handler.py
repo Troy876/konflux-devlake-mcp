@@ -143,6 +143,7 @@ class ToolHandler:
         try:
             result_dict = json.loads(result)
             if isinstance(result_dict, dict) and "data" in result_dict:
+                # Use the updated mask_database_result method that handles both lists and dicts
                 result_dict["data"] = self.data_masking.mask_database_result(result_dict["data"])
                 return json.dumps(result_dict, indent=2, cls=DateTimeEncoder)
         except (json.JSONDecodeError, KeyError):
