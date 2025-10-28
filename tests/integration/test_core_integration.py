@@ -26,33 +26,37 @@ class TestCoreIntegration:
         """Test core incident retrieval works with real database."""
         incident_tools = IncidentTools(integration_db_connection)
         
+        # Test basic query
         result_json = await incident_tools.call_tool("get_incidents", {})
         result = json.loads(result_json)
         
         assert result["success"] is True
         assert "incidents" in result
-        assert len(result["incidents"]) >= 0
+        assert len(result["incidents"]) >= 0  # Should work even with no data
 
     async def test_deployments_core_functionality(self, integration_db_connection: KonfluxDevLakeConnection):
         """Test core deployment retrieval works with real database."""
         deployment_tools = DeploymentTools(integration_db_connection)
         
+        # Test basic query
         result_json = await deployment_tools.call_tool("get_deployments", {})
         result = json.loads(result_json)
         
         assert result["success"] is True
         assert "deployments" in result
-        assert len(result["deployments"]) >= 0
+        assert len(result["deployments"]) >= 0  # Should work even with no data
 
     async def test_sql_injection_protection(self, integration_db_connection: KonfluxDevLakeConnection):
         """Test that SQL injection attempts are blocked."""
         incident_tools = IncidentTools(integration_db_connection)
         
+        # Attempt SQL injection
         result_json = await incident_tools.call_tool("get_incidents", {
             "status": "'; DROP TABLE incidents; --"
         })
         result = json.loads(result_json)
         
+        # Should either be blocked or safely escaped
         assert result["success"] is False or len(result.get("incidents", [])) >= 0
 
     async def test_database_schema_exists(self, integration_db_connection: KonfluxDevLakeConnection):

@@ -68,7 +68,6 @@ def run_unit_tests(verbose=False, specific_test=None):
 
 
 
-
 def run_all_tests(verbose=False):
     """Run all tests."""
     cmd = ["python", "-m", "pytest"]
@@ -197,6 +196,7 @@ Examples:
         print("❌ Cannot run tests without required dependencies")
         sys.exit(1)
     
+    # Handle test execution options
     if args.unit:
         success = run_unit_tests(args.verbose, args.test) and success
     elif args.security:
@@ -210,6 +210,7 @@ Examples:
     elif args.test:
         success = run_unit_tests(args.verbose, args.test) and success
     else:
+        # Default: run unit tests
         success = run_unit_tests(args.verbose) and success
     
     if success:

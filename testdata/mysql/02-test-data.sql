@@ -111,7 +111,7 @@ INSERT INTO cicd_deployments (
     'release/v3.0.0'
 );
 
--- Insert deployment commits
+-- Insert deployment commits (matching DevLake schema)
 INSERT INTO cicd_deployment_commits (
     deployment_id, cicd_deployment_id, cicd_scope_id, display_title, url, result, environment, finished_date,
     commit_sha, commit_message, commit_author, commit_date, _raw_data_table
@@ -162,7 +162,7 @@ INSERT INTO cicd_deployment_commits (
     'raw_deployments'
 );
 
--- Insert project mappings
+-- Insert project mappings (matching DevLake schema)
 INSERT INTO project_mapping (
     project_name, `table`, row_id, raw_data_table, params
 ) VALUES

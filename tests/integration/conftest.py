@@ -27,7 +27,11 @@ def event_loop():
 
 @pytest.fixture(scope="session")
 def integration_db_config() -> KonfluxDevLakeConfig:
-    """Database configuration for integration tests."""
+    """
+    Database configuration for integration tests.
+    
+    Uses environment variables or defaults to Docker Compose setup.
+    """
     config = KonfluxDevLakeConfig()
     config.database.host = os.getenv("TEST_DB_HOST", "localhost")
     config.database.port = int(os.getenv("TEST_DB_PORT", "3306"))
@@ -40,7 +44,12 @@ def integration_db_config() -> KonfluxDevLakeConfig:
 
 @pytest.fixture(scope="session")
 def wait_for_database(integration_db_config: KonfluxDevLakeConfig):
-    """Wait for the database to be ready before running tests."""
+    """
+    Wait for the database to be ready before running tests.
+    
+    This is crucial when using Docker Compose as the database
+    needs time to initialize.
+    """
     max_retries = 30
     retry_delay = 2
     
@@ -70,7 +79,12 @@ async def integration_db_connection(
     integration_db_config: KonfluxDevLakeConfig,
     wait_for_database
 ) -> AsyncGenerator[KonfluxDevLakeConnection, None]:
-    """Create a database connection for integration tests."""
+    """
+    Create a database connection for integration tests.
+    
+    This provides a real database connection that can be used
+    to test actual database operations.
+    """
     db_connection = KonfluxDevLakeConnection({
         'host': integration_db_config.database.host,
         'port': integration_db_config.database.port,
@@ -79,18 +93,26 @@ async def integration_db_connection(
         'database': integration_db_config.database.database
     })
     
+    # Test the connection
     result = await db_connection.connect()
     if not result["success"]:
         pytest.fail(f"Failed to connect to integration database: {result.get('error')}")
     
     yield db_connection
     
+    # Cleanup
     await db_connection.close()
 
 
 @pytest_asyncio.fixture(scope="function")
 async def clean_database(integration_db_connection: KonfluxDevLakeConnection):
-    """Clean database state before each test."""
+    """
+    Clean database state before each test.
+    
+    This ensures tests don't interfere with each other by
+    resetting the database to a known state.
+    """
+    # Clean up any test data that might interfere
     cleanup_queries = [
         "DELETE FROM cicd_deployment_commits WHERE deployment_id LIKE 'test-%'",
         "DELETE FROM cicd_deployments WHERE deployment_id LIKE 'test-%'",
@@ -103,6 +125,7 @@ async def clean_database(integration_db_connection: KonfluxDevLakeConnection):
     
     yield
     
+    # Clean up after test
     for query in cleanup_queries:
         await integration_db_connection.execute_query(query)
 
