@@ -7,8 +7,6 @@ import time
 from mcp.client.stdio import stdio_client
 from mcp import ClientSession, StdioServerParameters
 
-# Ensure LiteLLM background logging is disabled to avoid cross-event-loop queue errors between tests
-# Use strong disables as LiteLLM may spawn an async logging worker bound to the first loop
 os.environ.setdefault("LITELLM_LOGGING", "False")
 os.environ.setdefault("LITELLM_VERBOSE", "0")
 os.environ.setdefault("LITELLM_DISABLE_LOGGING", "1")
@@ -42,7 +40,6 @@ else:
     present = _present_models_from_env()
     if not present:
         pytest.exit("No LLM API keys found. Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY to run E2E tests.")
-    # Auto-select: if only one present, run just that; if multiple present, run all present
     models = present
 
 pytestmark = pytest.mark.anyio
@@ -53,12 +50,9 @@ def anyio_backend():
     return "asyncio"
 
 
-# Avoid cross-task teardown: keep fixtures simple; let anyio/pytest manage loop lifecycle
-
 
 @pytest.fixture
 def db_env():
-    # Map CI/local TEST_DB_* to server-recognized DB_*; provide sane defaults
     host = os.environ.get("TEST_DB_HOST", os.environ.get("DB_HOST", "localhost"))
     port = os.environ.get("TEST_DB_PORT", os.environ.get("DB_PORT", "3306"))
     user = os.environ.get("TEST_DB_USER", os.environ.get("DB_USER", "devlake"))
@@ -71,14 +65,12 @@ def db_env():
         "DB_USER": user,
         "DB_PASSWORD": password,
         "DB_DATABASE": database,
-        # Quiet noisy shutdown logs in tests
         "LOG_LEVEL": os.environ.get("LOG_LEVEL", "ERROR"),
     }
 
 
 @pytest.fixture
 async def mcp_client(db_env):
-    # Ensure DB is reachable to avoid long LLM/tool retries that look like hangs
     host = db_env["DB_HOST"]
     port = int(db_env["DB_PORT"])
     deadline = time.time() + float(os.environ.get("E2E_DB_WAIT_SECS", "20"))
@@ -118,7 +110,6 @@ async def mcp_client(db_env):
             "--db-database", db_env["DB_DATABASE"],
         ]
 
-    # Ensure server knows it's running under stdio so it suppresses console logs
     env = dict(db_env)
     env["MCP_STDIO"] = "true"
     params = StdioServerParameters(command=command, args=args, env=env)
@@ -130,4 +121,3 @@ async def mcp_client(db_env):
             except Exception as e:
                 pytest.skip(f"MCP server did not initialize in time: {e}")
             yield session
-

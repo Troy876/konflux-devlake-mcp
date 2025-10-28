@@ -3,7 +3,7 @@ from litellm import Message
 from mcp import ClientSession
 
 from ..e2e.utils import get_converted_tools, outcome_based_test
-from ..e2e.conftest import models  # reuse model matrix and stdio client
+from ..e2e.conftest import models
 
 
 pytestmark = pytest.mark.anyio
@@ -54,7 +54,7 @@ async def test_llm_list_tables(model: str, mcp_client: ClientSession):
     answer = await outcome_based_test(
         model, messages, tools, mcp_client, expected_keywords=["cicd"]
     )
-    assert any(t in answer.lower() for t in ["incidents", "deployments", "cicd"])  # flexible
+    assert any(t in answer.lower() for t in ["incidents", "deployments", "cicd"])
 
 
 @pytest.mark.parametrize("model", models)
@@ -69,4 +69,3 @@ async def test_llm_get_table_schema(model: str, mcp_client: ClientSession):
         model, messages, tools, mcp_client, expected_keywords=["incidents", "status"]
     )
     assert len(answer) > 10
-

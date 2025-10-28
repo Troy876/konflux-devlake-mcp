@@ -31,7 +31,6 @@ async def test_server_connect_direct(mcp_client: ClientSession):
     result = await mcp_client.call_tool(connect_name, {})
     assert result.content and result.content[0].text
     payload = await _content_to_dict(result.content[0].text)
-    # Accept either structured success or success message text
     assert (
         (isinstance(payload, dict) and payload.get("success") is True)
         or ("connected" in result.content[0].text.lower())
@@ -48,5 +47,3 @@ async def test_server_list_databases_direct(mcp_client: ClientSession):
     assert result.content and result.content[0].text
     text = result.content[0].text.lower()
     assert "lake" in text or "database" in text, f"Unexpected list databases response: {result.content[0].text[:200]}"
-
-

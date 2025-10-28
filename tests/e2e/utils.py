@@ -1,7 +1,6 @@
 from typing import Optional, Dict, Any, List
 import os
 import json
-import asyncio
 os.environ.setdefault("LITELLM_LOGGING", "False")
 os.environ.setdefault("LITELLM_VERBOSE", "0")
 os.environ.setdefault("LITELLM_DISABLE_LOGGING", "1")
@@ -41,7 +40,6 @@ async def outcome_based_test(
     conversation = messages.copy()
 
     for _ in range(max_iterations):
-        # revert to simpler call path first; caps can be reintroduced after verifying flow
         response = await acompletion(
             model=model,
             messages=conversation,
@@ -53,7 +51,6 @@ async def outcome_based_test(
         assistant_message = response.choices[0].message
         conversation.append(assistant_message)
 
-        # Normalize tool calls across providers (handles dict/object forms)
         raw_tool_calls = getattr(assistant_message, "tool_calls", None) or []
         tool_calls: List[Dict[str, str]] = []
         for tc in raw_tool_calls:
@@ -91,14 +88,12 @@ async def outcome_based_test(
                 Message(role="tool", tool_call_id=tool_call.get("id"), content=result.content[0].text)
             )
 
-            # Accept successful tool output immediately if it matches expectations
             tool_text = result.content[0].text or ""
             if tool_text:
                 if expected_keywords:
                     lower = tool_text.lower()
                     if all(kw.lower() in lower for kw in expected_keywords):
                         return tool_text
-                # Heuristic: many tools return a JSON object with success:true; allow that
                 if '"success": true' in tool_text.replace(" ", "").lower():
                     return tool_text
 

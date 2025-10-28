@@ -1,129 +1,28 @@
 # Makefile for Konflux DevLake MCP Server
 # Provides convenient commands for development, testing, and deployment
 
-.PHONY: help install test test-unit test-all clean run dev
+.PHONY: help install install-dev test test-unit test-all test-file test-clean run run-http dev docker-build docker-run clean check-deps ci-quick ci quick-test watch-tests docs pre-commit test-parallel test-verbose test-debug test-performance test-integration test-e2e test-integration-setup test-integration-teardown setup-dev help-test
 
 # Default target
-help: ## Show this help message
+help:
 	@echo "Konflux DevLake MCP Server - Development Commands"
 	@echo "=================================================="
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # Installation and setup
-install: ## Install dependencies
+install:
 	pip install -r requirements.txt
 
-install-dev: ## Install development dependencies
+install-dev:
 	pip install -r requirements.txt
 	pip install pytest-cov pytest-timeout pytest-xdist
 
 # Testing commands
-test: test-unit ## Run unit tests (default)
-
-test-unit: ## Run unit tests only (no external dependencies)
+test-unit:
 	python run_tests.py --unit --verbose
 
-
-
-test-all: ## Run ALL tests (unit + security + integration + e2e)
-	@echo "🚀 Running comprehensive test suite (unit + security + integration)..."
-	@echo "📦 Starting MySQL database..."
-	@docker compose up -d mysql || docker-compose up -d mysql
-	@echo "✅ Database container started"
-	@echo "⏳ Waiting for database to be ready..."
-	@sleep 35
-	@echo "🧪 Running all tests (unit + security + integration)..."
-	@python run_tests.py --all --verbose; \
-	CORE_RESULT=$$?; \
-	echo "🧹 Cleaning up database..."; \
-	docker compose down -v || docker-compose down -v; \
-	echo "✅ Database cleaned up"; \
-	if [ $$CORE_RESULT -ne 0 ]; then \
-		echo "❌ Core tests failed"; \
-		exit $$CORE_RESULT; \
-	fi; \
-	echo "🤖 Running LLM E2E tests..."; \
-	$(MAKE) --no-print-directory test-e2e; \
-	E2E_RESULT=$$?; \
-	if [ $$E2E_RESULT -ne 0 ]; then \
-		echo "❌ E2E tests failed"; \
-		exit $$E2E_RESULT; \
-	fi; \
-	echo ""; \
-	echo "✅ All tests passed (core + e2e)"
-
-test-file: ## Run specific test file (usage: make test-file FILE=test_config.py)
-	python run_tests.py --file $(FILE) --verbose
-
-test-clean: ## Clean test artifacts and cache files
-	python run_tests.py --clean
-
-
-# Development commands
-run: ## Run the MCP server in stdio mode
-	python konflux-devlake-mcp.py --transport stdio
-
-run-http: ## Run the MCP server in HTTP mode
-	python konflux-devlake-mcp.py --transport http --host 0.0.0.0 --port 3000
-
-dev: ## Run in development mode with debug logging
-	python konflux-devlake-mcp.py --transport stdio --log-level DEBUG
-
-# Docker commands
-docker-build: ## Build Docker image
-	docker build -t konflux-devlake-mcp .
-
-docker-run: ## Run Docker container
-	docker run -p 3000:3000 konflux-devlake-mcp
-
- 
-
-# Utility commands
-clean: test-clean ## Clean all generated files
-	find . -type f -name "*.pyc" -delete
-	find . -type d -name "__pycache__" -exec rm -rf {} +
-	rm -rf .pytest_cache
-
-check-deps: ## Check if all dependencies are installed
-	python run_tests.py --check-deps
-
-# CI/CD simulation
-ci-quick: clean install test-unit ## Quick CI check (unit (includes security), no database)
-
-ci: clean install test-all ## Full CI pipeline (all tests with database)
-
-# Quick development workflow
-quick-test: ## Quick test run (unit tests only, no verbose output)
-	python -m pytest -m unit -q
-
-watch-tests: ## Watch for file changes and run tests automatically (requires pytest-xdist)
-	python -m pytest -m unit --looponfail
-
-# Documentation
-docs: ## Generate documentation (placeholder)
-	@echo "Documentation generation not yet implemented"
-
-# Release preparation
-pre-commit: test-all ## Run pre-commit checks (all tests)
-	@echo "✅ Pre-commit checks completed successfully"
-
-# Advanced testing
-test-parallel: ## Run tests in parallel (requires pytest-xdist)
-	python -m pytest -m unit -n auto
-
-test-verbose: ## Run tests with maximum verbosity
-	python -m pytest -m unit -vvv --tb=long
-
-test-debug: ## Run tests with debugging enabled
-	python -m pytest -m unit -vvv --tb=long --pdb
-
-# Performance testing
-test-performance: ## Run performance-related tests (placeholder)
-	@echo "Performance tests not yet implemented"
-
-# Integration testing (requires database)
-test-integration: ## Run integration tests (handles setup and teardown automatically)
+test-integration:
 	@echo "🚀 Starting integration tests with database setup..."
 	@echo "📦 Starting MySQL database..."
 	@docker compose up -d mysql || docker-compose up -d mysql
@@ -138,7 +37,7 @@ test-integration: ## Run integration tests (handles setup and teardown automatic
 	echo "✅ Database cleaned up"; \
 	exit $$TEST_RESULT
 
-test-e2e: ## Run LLM E2E tests (requires API keys; models via E2E_TEST_MODELS)
+test-e2e:
 	@echo "🤖 Running LLM E2E tests..."
 	@echo "   Models: $${E2E_TEST_MODELS:-gemini/gemini-2.5-pro,gpt-4o,claude-3-5-sonnet-20240620}"
 	@if [ -z "$$OPENAI_API_KEY" ] && [ -z "$$ANTHROPIC_API_KEY" ] && [ -z "$$GEMINI_API_KEY" ]; then \
@@ -161,32 +60,62 @@ test-e2e: ## Run LLM E2E tests (requires API keys; models via E2E_TEST_MODELS)
 	echo "✅ Database cleaned up"; \
 	exit $$TEST_RESULT
 
- 
+test-all:
+	@echo "🚀 Running comprehensive test suite (unit + security + integration)..."
+	@echo "📦 Starting MySQL database..."
+	@docker compose up -d mysql || docker-compose up -d mysql
+	@echo "✅ Database container started"
+	@echo "⏳ Waiting for database to be ready..."
+	@sleep 35
+	@echo "🧪 Running all tests..."
+	@python run_tests.py --all --verbose; \
+	CORE_RESULT=$$?; \
+	echo "🧹 Cleaning up database..."; \
+	docker compose down -v || docker-compose down -v; \
+	echo "✅ Database cleaned up"; \
+	if [ $$CORE_RESULT -ne 0 ]; then \
+		echo "❌ Core tests failed"; \
+		exit $$CORE_RESULT; \
+	fi; \
+	echo "🤖 Running LLM E2E tests..."; \
+	$(MAKE) --no-print-directory test-e2e; \
+	E2E_RESULT=$$?; \
+	if [ $$E2E_RESULT -ne 0 ]; then \
+		echo "❌ E2E tests failed"; \
+		exit $$E2E_RESULT; \
+	fi; \
+	echo ""; \
+	echo "✅ All tests passed"
 
-test-integration-setup: ## Start database services for integration tests (manual setup)
-	@if command -v docker-compose >/dev/null 2>&1; then \
-		docker-compose up -d mysql; \
-	else \
-		docker compose up -d mysql; \
-	fi
-	@echo "Waiting for database to be ready..."
-	@sleep 15
-	@echo "Database should be ready."
+test-file:
+	python run_tests.py --file $(FILE) --verbose
 
-test-integration-teardown: ## Stop database services (manual teardown)
-	@if command -v docker-compose >/dev/null 2>&1; then \
-		docker-compose down -v; \
-	else \
-		docker compose down -v; \
-	fi
+test-clean:
+	python run_tests.py --clean
+
+# Docker commands
+docker-build: ## Build Docker image
+	docker build -t konflux-devlake-mcp .
+
+docker-run: ## Run Docker container
+	docker run -p 3000:3000 konflux-devlake-mcp
+
+# Utility commands
+clean: test-clean
+	find . -type f -name "*.pyc" -delete
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	rm -rf .pytest_cache
+
+check-deps:
+	python run_tests.py --check-deps
 
 # Environment setup
-setup-dev: install-dev ## Setup development environment
+setup-dev: install-dev
 	@echo "Development environment setup complete"
 	@echo "Run 'make test' to verify everything is working"
 
 # Help for specific commands
-help-test: ## Show detailed help for testing commands
+help-test:
 	@echo "Testing Commands:"
 	@echo ""
 	@echo "  Quick Tests (No Database):"

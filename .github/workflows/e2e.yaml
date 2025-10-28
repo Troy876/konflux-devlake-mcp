@@ -15,8 +15,8 @@ permissions:
   contents: read
 
 jobs:
-  llm-precheck:
-    name: LLM secret precheck
+  e2e-secrets-precheck:
+    name: E2E secret precheck
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
@@ -26,9 +26,9 @@ jobs:
             echo "::error::No LLM API keys set. Set at least one of OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY."
             exit 1
           fi
-  e2e-llm:
-    name: LLM E2E (${{ matrix.model }})
-    needs: llm-precheck
+  e2e-tests:
+    name: E2E Tests (${{ matrix.model }})
+    needs: e2e-secrets-precheck
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     strategy:
@@ -113,19 +113,17 @@ jobs:
           mysql -h127.0.0.1 -P3306 -uroot -ptest_password lake < testdata/mysql/02-test-data.sql
         if: steps.select.outputs.run == 'true'
 
-      - name: Run LLM E2E tests for model
+      - name: Run E2E tests for model
         env:
           TEST_DB_HOST: 127.0.0.1
           TEST_DB_PORT: 3306
           TEST_DB_USER: devlake
           TEST_DB_PASSWORD: devlake_password
           TEST_DB_NAME: lake
-          # Silence LiteLLM background logging worker to avoid cross-loop issues
           LITELLM_LOGGING: "0"
           LITELLM_DISABLE_LOGGING: "1"
           LITELLM_VERBOSE: "0"
           LITELLM_LOGGING_QUEUE: "0"
-          # Give DB a little extra time if needed
           E2E_DB_WAIT_SECS: "45"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -138,7 +136,7 @@ jobs:
       - name: Summarize E2E results (executed)
         if: always() && steps.select.outputs.run == 'true'
         run: |
-          echo "## 🤖 LLM E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "## E2E Tests Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Model**: ${{ matrix.model }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
@@ -147,7 +145,7 @@ jobs:
       - name: Summarize E2E results (skipped - missing secret)
         if: always() && steps.select.outputs.run != 'true'
         run: |
-          echo "## 🤖 LLM E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "## E2E Tests Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Model**: ${{ matrix.model }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: skipped (missing required secret: ${{ matrix.require_secret }})" >> $GITHUB_STEP_SUMMARY

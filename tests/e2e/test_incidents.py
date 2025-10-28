@@ -68,4 +68,3 @@ async def test_llm_incidents_by_date_range(model: str, mcp_client: ClientSession
         model, messages, tools, mcp_client, expected_keywords=["incident", "2024"]
     )
     assert len(answer) > 10
-

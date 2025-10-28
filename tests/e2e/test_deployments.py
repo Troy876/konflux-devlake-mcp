@@ -68,4 +68,3 @@ async def test_llm_deployments_by_date_range(model: str, mcp_client: ClientSessi
         model, messages, tools, mcp_client, expected_keywords=["deployment"]
     )
     assert len(answer) > 10
-
