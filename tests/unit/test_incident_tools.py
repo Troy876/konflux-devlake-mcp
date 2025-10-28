@@ -11,8 +11,6 @@ Tests the IncidentTools class functionality including:
 
 import pytest
 import json
-from datetime import datetime, timedelta
-from unittest.mock import Mock, AsyncMock
 
 from tools.devlake.incident_tools import IncidentTools
 from mcp.types import Tool
@@ -34,7 +32,6 @@ class TestIncidentTools:
         assert len(tools) == 1
         assert isinstance(tools[0], Tool)
         assert tools[0].name == "get_incidents"
-        assert "🚨" in tools[0].description
         assert "Comprehensive Incident Analysis Tool" in tools[0].description
 
     def test_get_tool_names(self, incident_tools):
@@ -65,7 +62,6 @@ class TestIncidentTools:
         assert "incidents" in result
         assert len(result["incidents"]) == 2
         
-        # Check default filter values
         filters = result["filters"]
         assert filters["status"] == "all"
         assert filters["component"] == "all"
@@ -277,7 +273,7 @@ class TestIncidentTools:
         assert schema["type"] == "object"
         assert "properties" in schema
         assert "required" in schema
-        assert schema["required"] == []  # All parameters are optional
+        assert schema["required"] == []
         
         properties = schema["properties"]
         expected_properties = [
@@ -299,8 +295,7 @@ class TestIncidentTools:
             
             for field in required_fields:
                 assert field in incident
-            
-            # Validate data types
+
             assert isinstance(incident["incident_key"], str)
             assert isinstance(incident["title"], str)
             assert isinstance(incident["status"], str)

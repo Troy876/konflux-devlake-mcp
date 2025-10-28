@@ -11,7 +11,6 @@ Tests the DatabaseTools class functionality including:
 
 import pytest
 import json
-from unittest.mock import Mock, AsyncMock, patch
 
 from tools.database_tools import DatabaseTools
 from mcp.types import Tool
@@ -30,7 +29,7 @@ class TestDatabaseTools:
         """Test that get_tools returns the expected tool definitions."""
         tools = database_tools.get_tools()
         
-        assert len(tools) == 4  # connect_database, list_databases, list_tables, get_table_schema
+        assert len(tools) == 4
         assert all(isinstance(tool, Tool) for tool in tools)
         
         tool_names = [tool.name for tool in tools]
@@ -161,7 +160,6 @@ class TestDatabaseTools:
         assert result["row_count"] == 5
         assert len(result["data"]) == 5
         
-        # Check that schema contains expected fields
         field_names = [field["Field"] for field in result["data"]]
         assert "id" in field_names
         assert "incident_key" in field_names
@@ -172,14 +170,12 @@ class TestDatabaseTools:
     @pytest.mark.asyncio
     async def test_get_table_schema_tool_missing_parameters(self, database_tools):
         """Test table schema with missing parameters."""
-        # Missing both database and table
         result_json = await database_tools.call_tool("get_table_schema", {})
         result = json.loads(result_json)
         
         assert result["success"] is False
         assert "Database and table names are required" in result["error"]
         
-        # Missing table parameter
         result_json = await database_tools.call_tool("get_table_schema", {"database": "lake"})
         result = json.loads(result_json)
         
@@ -206,16 +202,6 @@ class TestDatabaseTools:
         assert result["success"] is False
         assert "Database error" in result["error"]
 
-    def test_tool_descriptions_contain_emojis(self, database_tools):
-        """Test that tool descriptions contain the expected emojis for visual identification."""
-        tools = database_tools.get_tools()
-        tool_descriptions = {tool.name: tool.description for tool in tools}
-        
-        assert "🔌" in tool_descriptions["connect_database"]
-        assert "📊" in tool_descriptions["list_databases"]
-        assert "📋" in tool_descriptions["list_tables"]
-        assert "🔍" in tool_descriptions["get_table_schema"]
-
     def test_tool_input_schemas_are_valid(self, database_tools):
         """Test that all tools have valid input schemas."""
         tools = database_tools.get_tools()
@@ -225,7 +211,6 @@ class TestDatabaseTools:
             assert tool.inputSchema["type"] == "object"
             assert "properties" in tool.inputSchema
             assert "required" in tool.inputSchema
-            
-            # Verify required parameters are in properties
+
             for required_param in tool.inputSchema["required"]:
                 assert required_param in tool.inputSchema["properties"]

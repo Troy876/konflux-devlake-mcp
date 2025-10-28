@@ -1,7 +1,7 @@
 # Makefile for Konflux DevLake MCP Server
 # Provides convenient commands for development, testing, and deployment
 
-.PHONY: help install test test-unit test-security test-all clean run dev
+.PHONY: help install test test-unit test-all clean run dev
 
 # Default target
 help: ## Show this help message
@@ -24,8 +24,7 @@ test: test-unit ## Run unit tests (default)
 test-unit: ## Run unit tests only (no external dependencies)
 	python run_tests.py --unit --verbose
 
-test-security: ## Run security-related tests
-	python run_tests.py --security --verbose
+
 
 test-all: ## Run ALL tests (unit + security + integration + e2e)
 	@echo "🚀 Running comprehensive test suite (unit + security + integration)..."
@@ -90,7 +89,7 @@ check-deps: ## Check if all dependencies are installed
 	python run_tests.py --check-deps
 
 # CI/CD simulation
-ci-quick: clean install test-unit test-security ## Quick CI check (unit + security, no database)
+ci-quick: clean install test-unit ## Quick CI check (unit (includes security), no database)
 
 ci: clean install test-all ## Full CI pipeline (all tests with database)
 
@@ -192,7 +191,7 @@ help-test: ## Show detailed help for testing commands
 	@echo ""
 	@echo "  Quick Tests (No Database):"
 	@echo "    test-unit        - Unit tests only (91 tests, ~3 seconds)"
-	@echo "    test-security    - Security tests only (35 tests, ~1 second)"
+	@echo "    (security tests are included in unit)"
 	@echo "    quick-test       - Fast, quiet unit test run"
 	@echo ""
 	@echo "  Comprehensive Tests (Auto Database Setup):"
@@ -212,5 +211,5 @@ help-test: ## Show detailed help for testing commands
 	@echo "    test-clean       - Clean test artifacts and cache"
 	@echo ""
 	@echo "  CI/CD:"
-	@echo "    ci-quick         - Fast CI check (unit + security, no database)"
+	@echo "    ci-quick         - Fast CI check (unit incl. security, no database)"
 	@echo "    ci               - Full CI pipeline (all tests with database)"

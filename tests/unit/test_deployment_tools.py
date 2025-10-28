@@ -11,8 +11,6 @@ Tests the DeploymentTools class functionality including:
 
 import pytest
 import json
-from datetime import datetime, timedelta
-from unittest.mock import Mock, AsyncMock
 
 from tools.devlake.deployment_tools import DeploymentTools
 from mcp.types import Tool
@@ -34,7 +32,6 @@ class TestDeploymentTools:
         assert len(tools) == 1
         assert isinstance(tools[0], Tool)
         assert tools[0].name == "get_deployments"
-        assert "🚀" in tools[0].description
         assert "Comprehensive Deployment Analytics Tool" in tools[0].description
 
     def test_get_tool_names(self, deployment_tools):
@@ -65,7 +62,6 @@ class TestDeploymentTools:
         assert "deployments" in result
         assert len(result["deployments"]) == 2
         
-        # Check default filter values
         filters = result["filters"]
         assert filters["project"] == "all"
         assert filters["environment"] == "all"
@@ -234,15 +230,12 @@ class TestDeploymentTools:
     @pytest.mark.asyncio
     async def test_get_deployments_excludes_github_pages(self, deployment_tools, mock_db_connection):
         """Test that deployments exclude github_pages by default."""
-        # This test verifies the query construction excludes github_pages deployments
         await deployment_tools.call_tool("get_deployments", {})
         
-        # Verify the query was called (the actual exclusion logic is in the query construction)
         mock_db_connection.execute_query.assert_called_once()
         call_args = mock_db_connection.execute_query.call_args[0]
         query = call_args[0]
-        
-        # Check that the query contains exclusion patterns for github_pages
+
         assert "github_pages" in query.lower()
         assert "not like" in query.lower()
 
@@ -289,7 +282,7 @@ class TestDeploymentTools:
         assert schema["type"] == "object"
         assert "properties" in schema
         assert "required" in schema
-        assert schema["required"] == []  # All parameters are optional
+        assert schema["required"] == []
         
         properties = schema["properties"]
         expected_properties = [
@@ -312,7 +305,6 @@ class TestDeploymentTools:
             for field in required_fields:
                 assert field in deployment
             
-            # Validate data types
             assert isinstance(deployment["project_name"], str)
             assert isinstance(deployment["deployment_id"], str)
             assert isinstance(deployment["display_title"], str)

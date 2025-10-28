@@ -68,16 +68,14 @@ class TestSQLInjectionDetector:
             assert is_injection is True
             assert len(patterns) > 0
         
-        # Test queries that should be allowed (GRANT/REVOKE are not in the current patterns)
         allowed_queries = [
-            "TRUNCATE TABLE incidents",  # Not in current patterns
-            "GRANT ALL ON incidents TO user",  # Not in current patterns
-            "REVOKE SELECT ON incidents FROM user"  # Not in current patterns
+            "TRUNCATE TABLE incidents",
+            "GRANT ALL ON incidents TO user",
+            "REVOKE SELECT ON incidents FROM user"
         ]
         
         for query in allowed_queries:
             is_injection, patterns = sql_detector.detect_sql_injection(query)
-            # These might not be detected by current patterns, which is OK
 
     def test_empty_query(self, sql_detector):
         """Test detection with empty query."""
@@ -103,7 +101,6 @@ class TestSQLInjectionDetector:
         for query in dangerous_queries:
             is_injection, patterns = sql_detector.detect_sql_injection(query)
             assert is_injection is True
-
 
 @pytest.mark.unit
 @pytest.mark.security
@@ -276,8 +273,6 @@ class TestKonfluxDevLakeSecurityManager:
 
     def test_validate_sql_query_unbalanced_parentheses(self, security_manager):
         """Test detection of unbalanced parentheses."""
-        # Note: The current implementation allows all SELECT queries regardless of parentheses
-        # This test documents the current behavior - parentheses validation is not implemented for SELECT queries
         invalid_queries = [
             "SELECT * FROM test WHERE id IN (1, 2",
             "SELECT COUNT(*) FROM test WHERE (status = 'DONE'",
@@ -286,19 +281,15 @@ class TestKonfluxDevLakeSecurityManager:
         
         for query in invalid_queries:
             is_valid, message = security_manager.validate_sql_query(query)
-            # Current implementation allows all SELECT queries
             assert is_valid is True
             assert "SELECT query allowed" in message
 
     def test_validate_sql_query_too_long(self, security_manager):
         """Test rejection of overly long queries."""
-        # Create a query longer than 10KB limit but still a SELECT query
         long_query = "SELECT * FROM incidents WHERE " + "id = 1 OR " * 2000 + "id = 2"
         
         is_valid, message = security_manager.validate_sql_query(long_query)
-        # Note: The current implementation allows all SELECT queries regardless of length
-        # This test documents the current behavior - may need adjustment if length validation is added
-        assert is_valid is True  # Current behavior allows all SELECT queries
+        assert is_valid is True
 
     def test_validate_database_name_valid(self, security_manager):
         """Test validation of valid database names."""
@@ -404,7 +395,6 @@ class TestKonfluxDevLakeSecurityManager:
         user_id = "test_user"
         token = security_manager.generate_session_token(user_id)
         
-        # Manually expire the token
         security_manager.session_tokens[token]["expires"] = datetime.now() - timedelta(hours=1)
         
         is_valid, message = security_manager.validate_session_token(token)
@@ -413,23 +403,18 @@ class TestKonfluxDevLakeSecurityManager:
 
     def test_cleanup_expired_tokens(self, security_manager):
         """Test cleanup of expired session tokens."""
-        # Create tokens
         user1_token = security_manager.generate_session_token("user1")
         user2_token = security_manager.generate_session_token("user2")
         
-        # Expire one token
         security_manager.session_tokens[user1_token]["expires"] = datetime.now() - timedelta(hours=1)
         
-        # Cleanup
         security_manager.cleanup_expired_tokens()
         
-        # Check results
         assert user1_token not in security_manager.session_tokens
         assert user2_token in security_manager.session_tokens
 
     def test_get_security_stats(self, security_manager):
         """Test security statistics retrieval."""
-        # Generate some data
         security_manager.generate_api_key("user1")
         security_manager.generate_session_token("user1")
         
@@ -450,7 +435,7 @@ class TestKonfluxDevLakeSecurityManager:
         assert "<" not in sanitized
         assert ">" not in sanitized
         assert "&" not in sanitized
-        assert "script" in sanitized  # Text content should remain
+        assert "script" in sanitized
         assert "alert" in sanitized
         assert "DROP TABLE" in sanitized
 

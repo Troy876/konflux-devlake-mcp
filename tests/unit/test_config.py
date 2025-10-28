@@ -112,19 +112,16 @@ class TestKonfluxDevLakeConfig:
         with patch.dict(os.environ, {}, clear=True):
             config = KonfluxDevLakeConfig()
             
-            # Database defaults
             assert config.database.host == "localhost"
             assert config.database.port == 3306
             assert config.database.user == "root"
             assert config.database.password == ""
             assert config.database.database == ""
             
-            # Server defaults
             assert config.server.transport == "stdio"
             assert config.server.host == "0.0.0.0"
             assert config.server.port == 3000
             
-            # Logging defaults
             assert config.logging.level == "INFO"
 
     def test_config_environment_variables(self):
@@ -144,19 +141,16 @@ class TestKonfluxDevLakeConfig:
         with patch.dict(os.environ, env_vars, clear=True):
             config = KonfluxDevLakeConfig()
             
-            # Database from env
             assert config.database.host == "env-host"
             assert config.database.port == 5432
             assert config.database.user == "env-user"
             assert config.database.password == "env-password"
             assert config.database.database == "env-database"
             
-            # Server from env
             assert config.server.transport == "http"
             assert config.server.host == "127.0.0.1"
             assert config.server.port == 8080
             
-            # Logging from env
             assert config.logging.level == "DEBUG"
 
     def test_config_partial_environment_variables(self):
@@ -169,11 +163,8 @@ class TestKonfluxDevLakeConfig:
         with patch.dict(os.environ, env_vars, clear=True):
             config = KonfluxDevLakeConfig()
             
-            # Overridden values
             assert config.database.host == "partial-host"
             assert config.server.port == 9000
-            
-            # Default values for non-overridden settings
             assert config.database.port == 3306
             assert config.database.user == "root"
             assert config.server.transport == "stdio"
@@ -301,7 +292,6 @@ class TestKonfluxDevLakeConfig:
         with patch.dict(os.environ, env_vars, clear=True):
             config = KonfluxDevLakeConfig()
             
-            # Ensure ports are converted to integers
             assert isinstance(config.database.port, int)
             assert isinstance(config.server.port, int)
             assert config.database.port == 5432
@@ -314,7 +304,6 @@ class TestKonfluxDevLakeConfig:
         }
         
         with patch.dict(os.environ, env_vars, clear=True):
-            # This should raise a ValueError when trying to convert to int
             with pytest.raises(ValueError):
                 KonfluxDevLakeConfig()
 
@@ -327,9 +316,7 @@ class TestKonfluxDevLakeConfig:
         with patch.dict(os.environ, env_vars, clear=True):
             config = KonfluxDevLakeConfig()
             
-            # Verify environment value was loaded
             assert config.database.host == "env-host"
             
-            # Verify we can still modify the configuration
             config.database.host = "modified-host"
             assert config.database.host == "modified-host"

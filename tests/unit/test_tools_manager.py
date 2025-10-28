@@ -10,7 +10,6 @@ Tests the KonfluxDevLakeToolsManager class functionality including:
 
 import pytest
 import json
-from unittest.mock import Mock, AsyncMock
 
 from tools.tools_manager import KonfluxDevLakeToolsManager
 from tools.database_tools import DatabaseTools
@@ -33,7 +32,6 @@ class TestKonfluxDevLakeToolsManager:
         assert tools_manager.db_connection == mock_db_connection
         assert len(tools_manager._tool_modules) == 3
         
-        # Check that all expected tool modules are present
         module_types = [type(module).__name__ for module in tools_manager._tool_modules]
         assert "DatabaseTools" in module_types
         assert "IncidentTools" in module_types
@@ -43,7 +41,6 @@ class TestKonfluxDevLakeToolsManager:
         """Test that tool mapping is created correctly."""
         tool_mapping = tools_manager._tool_mapping
         
-        # Should have tools from all modules
         expected_tools = [
             "connect_database", "list_databases", "list_tables", "get_table_schema",
             "get_incidents", "get_deployments"
@@ -59,7 +56,7 @@ class TestKonfluxDevLakeToolsManager:
         tools = await tools_manager.list_tools()
         
         assert isinstance(tools, list)
-        assert len(tools) >= 6  # At least 6 tools from the 3 modules
+        assert len(tools) >= 6
         
         for tool in tools:
             assert isinstance(tool, Tool)
@@ -70,7 +67,6 @@ class TestKonfluxDevLakeToolsManager:
     @pytest.mark.asyncio
     async def test_call_tool_success(self, tools_manager, mock_db_connection):
         """Test successful tool execution."""
-        # Mock the database connection response
         mock_db_connection.connect.return_value = {
             "success": True,
             "message": "Database connected successfully"
@@ -132,13 +128,11 @@ class TestKonfluxDevLakeToolsManager:
         assert stats["modules"] == 3
         assert stats["total_tools"] >= 6
         
-        # Check tools by module
         tools_by_module = stats["tools_by_module"]
         assert "DatabaseTools" in tools_by_module
         assert "IncidentTools" in tools_by_module
         assert "DeploymentTools" in tools_by_module
         
-        # Check available tools list
         available_tools = stats["available_tools"]
         assert "connect_database" in available_tools
         assert "get_incidents" in available_tools
@@ -146,29 +140,23 @@ class TestKonfluxDevLakeToolsManager:
 
     def test_validate_tool_exists(self, tools_manager):
         """Test tool existence validation."""
-        # Test existing tools
         assert tools_manager.validate_tool_exists("connect_database") is True
         assert tools_manager.validate_tool_exists("list_databases") is True
         assert tools_manager.validate_tool_exists("get_incidents") is True
         assert tools_manager.validate_tool_exists("get_deployments") is True
-        
-        # Test non-existing tool
         assert tools_manager.validate_tool_exists("nonexistent_tool") is False
 
     def test_get_tool_module(self, tools_manager):
         """Test getting the module for a specific tool."""
-        # Test database tools
         db_module = tools_manager.get_tool_module("connect_database")
         assert isinstance(db_module, DatabaseTools)
         
         list_db_module = tools_manager.get_tool_module("list_databases")
         assert isinstance(list_db_module, DatabaseTools)
         
-        # Test incident tools
         incident_module = tools_manager.get_tool_module("get_incidents")
         assert isinstance(incident_module, IncidentTools)
         
-        # Test deployment tools
         deployment_module = tools_manager.get_tool_module("get_deployments")
         assert isinstance(deployment_module, DeploymentTools)
 
@@ -181,15 +169,12 @@ class TestKonfluxDevLakeToolsManager:
 
     def test_tool_module_isolation(self, tools_manager):
         """Test that tool modules are properly isolated."""
-        # Get modules for different tools
         db_module1 = tools_manager.get_tool_module("connect_database")
         db_module2 = tools_manager.get_tool_module("list_databases")
         incident_module = tools_manager.get_tool_module("get_incidents")
         
-        # Database tools should use the same module instance
         assert db_module1 is db_module2
         
-        # Different tool types should use different modules
         assert db_module1 is not incident_module
 
     @pytest.mark.asyncio
@@ -197,11 +182,9 @@ class TestKonfluxDevLakeToolsManager:
         """Test handling of concurrent tool calls."""
         import asyncio
         
-        # Mock responses for different tools
         mock_db_connection.connect.return_value = {"success": True, "message": "Connected"}
         mock_db_connection.execute_query.return_value = {"success": True, "data": []}
         
-        # Execute multiple tools concurrently
         tasks = [
             tools_manager.call_tool("connect_database", {}),
             tools_manager.call_tool("list_databases", {}),
@@ -211,7 +194,6 @@ class TestKonfluxDevLakeToolsManager:
         
         results = await asyncio.gather(*tasks)
         
-        # All calls should succeed
         assert len(results) == 4
         for result in results:
             result_data = json.loads(result)
@@ -219,13 +201,11 @@ class TestKonfluxDevLakeToolsManager:
 
     def test_tool_mapping_completeness(self, tools_manager):
         """Test that all tools from modules are in the mapping."""
-        # Get all tools from individual modules
         all_module_tools = []
         for module in tools_manager._tool_modules:
             module_tools = module.get_tools()
             all_module_tools.extend([tool.name for tool in module_tools])
         
-        # Check that all tools are in the mapping
         mapping_tools = list(tools_manager._tool_mapping.keys())
         
         assert len(all_module_tools) == len(mapping_tools)
@@ -240,31 +220,25 @@ class TestKonfluxDevLakeToolsManager:
     @pytest.mark.asyncio
     async def test_tool_call_parameter_forwarding(self, tools_manager, mock_db_connection):
         """Test that tool parameters are properly forwarded."""
-        # Setup mock to capture the call
         mock_db_connection.execute_query.return_value = {
             "success": True,
             "query": "DESCRIBE `test_db`.`test_table`",
             "data": []
         }
         
-        # Call tool with specific parameters
         await tools_manager.call_tool("get_table_schema", {
             "database": "test_db",
             "table": "test_table"
         })
         
-        # Verify the parameters were forwarded correctly
         mock_db_connection.execute_query.assert_called_once_with("DESCRIBE `test_db`.`test_table`")
 
     def test_tool_manager_memory_efficiency(self, tools_manager):
         """Test that tool manager doesn't create duplicate tool instances."""
-        # Get the same tool multiple times
         module1 = tools_manager.get_tool_module("connect_database")
         module2 = tools_manager.get_tool_module("list_databases")
         module3 = tools_manager.get_tool_module("list_tables")
         
-        # All database tools should use the same module instance
         assert module1 is module2 is module3
         
-        # Verify only expected number of module instances
         assert len(tools_manager._tool_modules) == 3

@@ -8,7 +8,6 @@ This module provides shared fixtures and configuration for all tests.
 import pytest
 import asyncio
 from unittest.mock import Mock, AsyncMock
-from typing import Dict, Any
 
 from utils.config import KonfluxDevLakeConfig, DatabaseConfig, ServerConfig, LoggingConfig
 from utils.db import KonfluxDevLakeConnection
@@ -213,7 +212,6 @@ def sample_database_schema():
     ]
 
 
-# Test markers for categorizing tests
 def pytest_configure(config):
     """Configure pytest markers."""
     config.addinivalue_line(

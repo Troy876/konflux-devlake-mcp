@@ -56,7 +56,7 @@ def check_dependencies():
 
 def run_unit_tests(verbose=False, specific_test=None):
     """Run unit tests."""
-    cmd = ["python", "-m", "pytest", "tests/unit/", "-m", "unit"]
+    cmd = ["python", "-m", "pytest", "tests/unit/", "-m", "unit or security"]
     
     if verbose:
         cmd.append("-v")
@@ -136,7 +136,6 @@ def clean_test_artifacts():
                 os.remove(artifact)
                 print(f"Removed file: {artifact}")
     
-    # Clean __pycache__ directories recursively
     for root, dirs, files in os.walk("."):
         for dir_name in dirs:
             if dir_name == "__pycache__":
@@ -162,7 +161,6 @@ Examples:
         """
     )
     
-    # Test execution options
     parser.add_argument("--unit", action="store_true", help="Run unit tests only")
     parser.add_argument("--all", action="store_true", help="Run all tests")
     parser.add_argument("--security", action="store_true", help="Run security tests only")
@@ -171,22 +169,18 @@ Examples:
     parser.add_argument("--test", type=str, help="Run specific test (e.g., test_config.py::TestDatabaseConfig::test_defaults)")
     
     
-    # Output options
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     
-    # Utility options
     parser.add_argument("--clean", action="store_true", help="Clean test artifacts and cache files")
     parser.add_argument("--check-deps", action="store_true", help="Check if dependencies are installed")
     
     args = parser.parse_args()
     
-    # Change to the script directory
     script_dir = Path(__file__).parent
     os.chdir(script_dir)
     
     success = True
     
-    # Handle utility options first
     if args.clean:
         clean_test_artifacts()
         return
@@ -199,12 +193,10 @@ Examples:
             sys.exit(1)
         return
     
-    # Check dependencies before running tests
     if not check_dependencies():
         print("❌ Cannot run tests without required dependencies")
         sys.exit(1)
     
-    # Handle test execution options
     if args.unit:
         success = run_unit_tests(args.verbose, args.test) and success
     elif args.security:
@@ -218,16 +210,13 @@ Examples:
     elif args.test:
         success = run_unit_tests(args.verbose, args.test) and success
     else:
-        # Default: run unit tests
         success = run_unit_tests(args.verbose) and success
     
-    # Print summary
     if success:
         print("\n✅ All operations completed successfully!")
     else:
         print("\n❌ Some operations failed!")
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
