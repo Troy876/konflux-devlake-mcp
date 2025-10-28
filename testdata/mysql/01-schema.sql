@@ -3,7 +3,7 @@
 
 USE lake;
 
--- Incidents table (based on DevLake schema)
+-- Incidents table
 CREATE TABLE incidents (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     incident_key VARCHAR(255) NOT NULL UNIQUE,
@@ -53,7 +53,7 @@ CREATE TABLE cicd_deployments (
     INDEX idx_finished_date (finished_date)
 );
 
--- CICD Deployment Commits table (matching DevLake schema for tools)
+-- CICD Deployment Commits table
 CREATE TABLE cicd_deployment_commits (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     deployment_id VARCHAR(255) NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE cicd_deployment_commits (
     FOREIGN KEY (deployment_id) REFERENCES cicd_deployments(deployment_id) ON DELETE CASCADE
 );
 
--- Project Mapping table (matching DevLake schema)
+-- Project Mapping table
 CREATE TABLE project_mapping (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     project_name VARCHAR(255) NOT NULL,

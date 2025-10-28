@@ -7,7 +7,6 @@ with real database operations and proper tool routing.
 
 import pytest
 import json
-from typing import Dict, Any
 
 from tools.tools_manager import KonfluxDevLakeToolsManager
 from utils.db import KonfluxDevLakeConnection
@@ -29,19 +28,15 @@ class TestToolsManagerIntegration:
         
         assert len(tools) > 0
         
-        # Check that we have tools from all modules
         tool_names = [tool.name for tool in tools]
         
-        # Database tools
         assert "connect_database" in tool_names
         assert "list_databases" in tool_names
         assert "list_tables" in tool_names
         assert "get_table_schema" in tool_names
         
-        # Incident tools
         assert "get_incidents" in tool_names
         
-        # Deployment tools
         assert "get_deployments" in tool_names
 
     async def test_call_database_tool(
@@ -115,9 +110,8 @@ class TestToolsManagerIntegration:
         assert "available_tools" in stats
         
         assert stats["total_tools"] > 0
-        assert stats["modules"] == 3  # DatabaseTools, IncidentTools, DeploymentTools
+        assert stats["modules"] == 3
         
-        # Check that each module has tools
         assert "DatabaseTools" in stats["tools_by_module"]
         assert "IncidentTools" in stats["tools_by_module"]
         assert "DeploymentTools" in stats["tools_by_module"]
@@ -133,12 +127,10 @@ class TestToolsManagerIntegration:
         """Test validating tool existence."""
         tools_manager = KonfluxDevLakeToolsManager(integration_db_connection)
         
-        # Existing tools
         assert tools_manager.validate_tool_exists("list_databases") is True
         assert tools_manager.validate_tool_exists("get_incidents") is True
         assert tools_manager.validate_tool_exists("get_deployments") is True
         
-        # Non-existent tool
         assert tools_manager.validate_tool_exists("nonexistent_tool") is False
 
     async def test_get_tool_module(
@@ -148,7 +140,6 @@ class TestToolsManagerIntegration:
         """Test getting the module for a specific tool."""
         tools_manager = KonfluxDevLakeToolsManager(integration_db_connection)
         
-        # Get modules for different tools
         db_module = tools_manager.get_tool_module("list_databases")
         incident_module = tools_manager.get_tool_module("get_incidents")
         deployment_module = tools_manager.get_tool_module("get_deployments")
@@ -177,7 +168,6 @@ class TestToolsManagerIntegration:
         """Test that tool arguments are properly routed to the correct tool."""
         tools_manager = KonfluxDevLakeToolsManager(integration_db_connection)
         
-        # Test incident tool with arguments
         result_json = await tools_manager.call_tool("get_incidents", {
             "status": "DONE",
             "limit": 5
@@ -196,17 +186,14 @@ class TestToolsManagerIntegration:
         """Test multiple sequential tool calls work correctly."""
         tools_manager = KonfluxDevLakeToolsManager(integration_db_connection)
         
-        # Call database tool
         result1_json = await tools_manager.call_tool("list_databases", {})
         result1 = json.loads(result1_json)
         assert result1["success"] is True
         
-        # Call incident tool
         result2_json = await tools_manager.call_tool("get_incidents", {})
         result2 = json.loads(result2_json)
         assert result2["success"] is True
         
-        # Call deployment tool
         result3_json = await tools_manager.call_tool("get_deployments", {})
         result3 = json.loads(result3_json)
         assert result3["success"] is True
@@ -218,13 +205,10 @@ class TestToolsManagerIntegration:
         """Test that tool errors are properly handled and returned."""
         tools_manager = KonfluxDevLakeToolsManager(integration_db_connection)
         
-        # Call tool with invalid arguments
         result_json = await tools_manager.call_tool("get_table_schema", {
             "database": "lake"
-            # Missing required 'table' parameter
         })
         result = json.loads(result_json)
         
         assert result["success"] is False
         assert "error" in result
-

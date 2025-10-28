@@ -284,12 +284,6 @@ Thumbs.db
 *.p12
 *.pfx
 
-# Docker
-.dockerignore
-Dockerfile
-docker-compose.yml
-docker-compose.yaml
-
 # Terraform
 *.tfstate
 *.tfstate.*

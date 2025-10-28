@@ -7,7 +7,6 @@ in the actual database schema.
 
 import pytest
 import json
-from typing import Dict, Any
 
 from utils.db import KonfluxDevLakeConnection
 from tools.devlake.incident_tools import IncidentTools
@@ -25,7 +24,6 @@ class TestDataQualityIntegration:
         clean_database
     ):
         """Test that incident data maintains integrity constraints."""
-        # Query incidents
         result = await integration_db_connection.execute_query(
             "SELECT * FROM incidents WHERE incident_key = 'INC-2024-001'"
         )
@@ -35,13 +33,11 @@ class TestDataQualityIntegration:
         
         incident = result["data"][0]
         
-        # Check required fields are present
         assert incident["incident_key"] is not None
         assert incident["title"] is not None
         assert incident["status"] is not None
         assert incident["created_date"] is not None
         
-        # Check status is valid
         valid_statuses = ["OPEN", "IN_PROGRESS", "DONE", "CLOSED"]
         assert incident["status"] in valid_statuses
 
@@ -51,7 +47,6 @@ class TestDataQualityIntegration:
         clean_database
     ):
         """Test that deployment data maintains integrity constraints."""
-        # Query deployments
         result = await integration_db_connection.execute_query(
             "SELECT * FROM cicd_deployments WHERE deployment_id = 'deploy-api-prod-001'"
         )
@@ -61,17 +56,14 @@ class TestDataQualityIntegration:
         
         deployment = result["data"][0]
         
-        # Check required fields are present
         assert deployment["deployment_id"] is not None
         assert deployment["display_title"] is not None
         assert deployment["environment"] is not None
         assert deployment["result"] is not None
         
-        # Check environment is valid
         valid_environments = ["PRODUCTION", "STAGING", "DEVELOPMENT"]
         assert deployment["environment"] in valid_environments
         
-        # Check result is valid
         valid_results = ["SUCCESS", "FAILURE", "ABORTED", "UNSTABLE"]
         assert deployment["result"] in valid_results
 
@@ -81,7 +73,6 @@ class TestDataQualityIntegration:
         clean_database
     ):
         """Test that deployments and deployment commits have proper relationships."""
-        # Get a deployment
         deployment_result = await integration_db_connection.execute_query(
             "SELECT deployment_id FROM cicd_deployments LIMIT 1"
         )
@@ -91,7 +82,6 @@ class TestDataQualityIntegration:
         
         deployment_id = deployment_result["data"][0]["deployment_id"]
         
-        # Check that corresponding deployment commit exists
         commit_result = await integration_db_connection.execute_query(
             f"SELECT * FROM cicd_deployment_commits WHERE deployment_id = '{deployment_id}'"
         )
@@ -105,7 +95,6 @@ class TestDataQualityIntegration:
         clean_database
     ):
         """Test that project mapping data maintains integrity."""
-        # Query project mappings
         result = await integration_db_connection.execute_query(
             "SELECT * FROM project_mapping"
         )
@@ -114,7 +103,6 @@ class TestDataQualityIntegration:
         assert len(result["data"]) > 0
         
         for mapping in result["data"]:
-            # Check required fields are present
             assert mapping["project_name"] is not None
             assert mapping["table"] is not None
             assert mapping["row_id"] is not None
@@ -136,7 +124,6 @@ class TestDataQualityIntegration:
         
         for incident in result["incidents"]:
             if incident.get("resolution_date"):
-                # If resolved, created_date should be before resolution_date
                 assert incident["created_date"] <= incident["resolution_date"]
 
     async def test_deployment_date_consistency(
@@ -156,7 +143,6 @@ class TestDataQualityIntegration:
         
         for deployment in result["deployments"]:
             if deployment.get("finished_date") and deployment.get("created_date"):
-                # finished_date should be after created_date
                 assert deployment["created_date"] <= deployment["finished_date"]
 
     async def test_unique_incident_keys(
@@ -171,7 +157,6 @@ class TestDataQualityIntegration:
         
         assert result["success"] is True
         
-        # Each incident_key should appear exactly once
         for row in result["data"]:
             assert row["count"] == 1
 
@@ -187,7 +172,6 @@ class TestDataQualityIntegration:
         
         assert result["success"] is True
         
-        # Each deployment_id should appear exactly once
         for row in result["data"]:
             assert row["count"] == 1
 
@@ -205,10 +189,8 @@ class TestDataQualityIntegration:
         
         for row in result["data"]:
             if row.get("labels"):
-                # Labels should be valid JSON string or already parsed
                 labels = row["labels"]
                 if isinstance(labels, str):
-                    # If string, should be valid JSON
                     try:
                         json.loads(labels)
                     except json.JSONDecodeError:
@@ -227,13 +209,10 @@ class TestDataQualityIntegration:
         
         assert result["success"] is True
         
-        # Check that NULL fields don't cause issues
         for incident in result["incidents"]:
-            # These fields might be NULL
             incident.get("assignee")
             incident.get("resolution_date")
             incident.get("description")
-            # Should not raise KeyError
 
     async def test_null_handling_in_deployments(
         self, 
@@ -248,12 +227,9 @@ class TestDataQualityIntegration:
         
         assert result["success"] is True
         
-        # Check that NULL fields don't cause issues
         for deployment in result["deployments"]:
-            # These fields might be NULL
             deployment.get("branch")
             deployment.get("duration_sec")
-            # Should not raise KeyError
 
     async def test_data_count_consistency(
         self, 
@@ -261,7 +237,6 @@ class TestDataQualityIntegration:
         clean_database
     ):
         """Test that data counts are consistent across related tables."""
-        # Count deployments
         deployment_count_result = await integration_db_connection.execute_query(
             "SELECT COUNT(*) as count FROM cicd_deployments"
         )
@@ -269,7 +244,6 @@ class TestDataQualityIntegration:
         assert deployment_count_result["success"] is True
         deployment_count = deployment_count_result["data"][0]["count"]
         
-        # Count deployment commits
         commit_count_result = await integration_db_connection.execute_query(
             "SELECT COUNT(*) as count FROM cicd_deployment_commits"
         )
@@ -277,7 +251,4 @@ class TestDataQualityIntegration:
         assert commit_count_result["success"] is True
         commit_count = commit_count_result["data"][0]["count"]
         
-        # Should have at least as many commits as deployments
-        # (each deployment should have at least one commit)
         assert commit_count >= deployment_count
-

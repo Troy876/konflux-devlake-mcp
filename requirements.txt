@@ -24,8 +24,8 @@ black>=23.0.0
 flake8>=6.0.0
 mypy>=1.0.0
 
-# E2E test dependencies (optional - only needed if running E2E tests)
-litellm>=1.60.0  # 1.60+ includes improved Gemini function calling support
+# E2E test dependencies
+litellm>=1.60.0
 flaky>=3.7.0
 python-dotenv>=1.0.0
 anyio>=4.0.0

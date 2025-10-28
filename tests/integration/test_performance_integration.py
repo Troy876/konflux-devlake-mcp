@@ -8,7 +8,6 @@ and edge cases correctly with a real database.
 import pytest
 import json
 import asyncio
-from typing import Dict, Any
 
 from tools.devlake.incident_tools import IncidentTools
 from tools.devlake.deployment_tools import DeploymentTools
@@ -29,7 +28,6 @@ class TestConcurrentOperations:
         """Test multiple concurrent incident queries work correctly."""
         incident_tools = IncidentTools(integration_db_connection)
         
-        # Execute multiple queries concurrently
         tasks = [
             incident_tools.call_tool("get_incidents", {})
             for _ in range(5)
@@ -37,7 +35,6 @@ class TestConcurrentOperations:
         
         results = await asyncio.gather(*tasks)
         
-        # Verify all queries completed successfully
         assert len(results) == 5
         for result_json in results:
             result = json.loads(result_json)
@@ -52,7 +49,6 @@ class TestConcurrentOperations:
         """Test multiple concurrent deployment queries work correctly."""
         deployment_tools = DeploymentTools(integration_db_connection)
         
-        # Execute multiple queries concurrently
         tasks = [
             deployment_tools.call_tool("get_deployments", {})
             for _ in range(5)
@@ -60,7 +56,6 @@ class TestConcurrentOperations:
         
         results = await asyncio.gather(*tasks)
         
-        # Verify all queries completed successfully
         assert len(results) == 5
         for result_json in results:
             result = json.loads(result_json)
@@ -77,7 +72,6 @@ class TestConcurrentOperations:
         deployment_tools = DeploymentTools(integration_db_connection)
         db_tools = DatabaseTools(integration_db_connection)
         
-        # Mix different types of queries
         tasks = [
             incident_tools.call_tool("get_incidents", {}),
             deployment_tools.call_tool("get_deployments", {}),
@@ -88,7 +82,6 @@ class TestConcurrentOperations:
         
         results = await asyncio.gather(*tasks)
         
-        # Verify all queries completed
         assert len(results) == 5
         for result_json in results:
             result = json.loads(result_json)
@@ -102,13 +95,11 @@ class TestConcurrentOperations:
         """Test rapid sequential queries work correctly."""
         incident_tools = IncidentTools(integration_db_connection)
         
-        # Make rapid sequential calls
         results = []
         for _ in range(10):
             result_json = await incident_tools.call_tool("get_incidents", {})
             results.append(result_json)
         
-        # Verify all calls completed successfully
         assert len(results) == 10
         for result_json in results:
             result = json.loads(result_json)
@@ -153,7 +144,7 @@ class TestErrorScenarios:
     ):
         """Test handling of invalid SQL syntax."""
         result = await integration_db_connection.execute_query(
-            "SELECT * FORM incidents"  # typo: FORM instead of FROM
+            "SELECT * FORM incidents"
         )
         
         assert result["success"] is False
@@ -166,10 +157,8 @@ class TestErrorScenarios:
         """Test tools handle missing required parameters correctly."""
         db_tools = DatabaseTools(integration_db_connection)
         
-        # Call get_table_schema without required 'table' parameter
         result_json = await db_tools.call_tool("get_table_schema", {
             "database": "lake"
-            # Missing 'table' parameter
         })
         result = json.loads(result_json)
         
@@ -185,7 +174,6 @@ class TestErrorScenarios:
         """Test handling of queries that return no results."""
         incident_tools = IncidentTools(integration_db_connection)
         
-        # Query with filter that matches nothing
         result_json = await incident_tools.call_tool("get_incidents", {
             "component": "nonexistent-component-xyz"
         })
@@ -203,13 +191,11 @@ class TestErrorScenarios:
         """Test handling of invalid filter values."""
         deployment_tools = DeploymentTools(integration_db_connection)
         
-        # Try with invalid date format
         result_json = await deployment_tools.call_tool("get_deployments", {
             "start_date": "not-a-valid-date"
         })
         result = json.loads(result_json)
         
-        # Should either fail gracefully or ignore invalid date
         assert isinstance(result, dict)
         assert "success" in result
 
@@ -233,7 +219,6 @@ class TestConnectionEdgeCases:
         assert "database" in conn_info
         assert conn_info["database"] == "lake"
         
-        # Password should never be in connection info (security)
         assert "password" not in conn_info
         assert "passwd" not in str(conn_info).lower()
 
@@ -242,13 +227,11 @@ class TestConnectionEdgeCases:
         integration_db_connection: KonfluxDevLakeConnection
     ):
         """Test multiple connection attempts work correctly."""
-        # Connect multiple times
         results = []
         for _ in range(3):
             result = await integration_db_connection.connect()
             results.append(result)
         
-        # All connections should succeed
         for result in results:
             assert result["success"] is True
 
@@ -257,15 +240,12 @@ class TestConnectionEdgeCases:
         integration_db_connection: KonfluxDevLakeConnection
     ):
         """Test queries work after establishing connection."""
-        # Ensure connected
         conn_result = await integration_db_connection.connect()
         assert conn_result["success"] is True
         
-        # Execute query
         query_result = await integration_db_connection.execute_query(
             "SELECT 1 as test"
         )
         
         assert query_result["success"] is True
         assert "data" in query_result
-
