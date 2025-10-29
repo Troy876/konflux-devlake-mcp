@@ -380,26 +380,36 @@ class DataMasking:
         
         return masked_data
     
-    def mask_database_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
+    def mask_database_result(self, result: Any) -> Any:
         """Mask sensitive data in database result"""
         if not result:
             return result
         
-        masked_result = {}
+        # Handle list of records
+        if isinstance(result, list):
+            return [
+                self.mask_database_result(item) if isinstance(item, dict)
+                else self.mask_sensitive_data(str(item)) if isinstance(item, str)
+                else item
+                for item in result
+            ]
         
-        for key, value in result.items():
-            if isinstance(value, str):
-                masked_result[key] = self.mask_sensitive_data(value)
-            elif isinstance(value, dict):
-                masked_result[key] = self.mask_database_result(value)
-            elif isinstance(value, list):
-                masked_result[key] = [
-                    self.mask_database_result(item) if isinstance(item, dict)
-                    else self.mask_sensitive_data(str(item)) if isinstance(item, str)
-                    else item
-                    for item in value
-                ]
-            else:
-                masked_result[key] = value
+        # Handle dictionary
+        if isinstance(result, dict):
+            masked_result = {}
+            for key, value in result.items():
+                if isinstance(value, str):
+                    masked_result[key] = self.mask_sensitive_data(value)
+                elif isinstance(value, dict):
+                    masked_result[key] = self.mask_database_result(value)
+                elif isinstance(value, list):
+                    masked_result[key] = self.mask_database_result(value)
+                else:
+                    masked_result[key] = value
+            return masked_result
         
-        return masked_result 
+        # Handle other types
+        if isinstance(result, str):
+            return self.mask_sensitive_data(result)
+        
+        return result 

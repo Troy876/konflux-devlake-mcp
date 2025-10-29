@@ -1,0 +1,65 @@
+graph TB
+    subgraph "Client Layer"
+        USER[User/AI Assistant]
+    end
+
+    subgraph "MCP Server"
+        subgraph "Transport Layer"
+            HTTP[HTTP Transport<br/>Production]
+            STDIO[STDIO Transport<br/>Development]
+        end
+        
+        subgraph "Core Server"
+            MCP[MCP Server<br/>Protocol Handler]
+            HANDLER[Tool Handler<br/>Security & Validation]
+        end
+        
+        subgraph "Tools System"
+            TM[Tools Manager]
+            DB[Database Tools]
+            INC[Incident Tools]
+            DEP[Deployment Tools]
+        end
+        
+        subgraph "Security Layer"
+            SEC[Security Manager]
+            SQL[SQL Injection Detector]
+            MASK[Data Masking]
+        end
+        
+        subgraph "Database Layer"
+            DB_CONN[Database Connection<br/>PyMySQL with DictCursor]
+        end
+    end
+
+    subgraph "DevLake Database"
+        MYSQL[(MySQL Database<br/>Konflux DevLake Data)]
+    end
+
+    USER -->|Natural Language Query| HTTP
+    USER -->|Debugging| STDIO
+    HTTP --> MCP
+    STDIO --> MCP
+    MCP --> HANDLER
+    HANDLER --> TM
+    TM --> DB
+    TM --> INC
+    TM --> DEP
+    HANDLER -.->|Security Check| SEC
+    SEC --> SQL
+    SEC --> MASK
+    DB --> DB_CONN
+    INC --> DB_CONN
+    DEP --> DB_CONN
+    DB_CONN -->|SELECT Queries| MYSQL
+    MYSQL -->|Results| DB_CONN
+    DB_CONN -->|Structured Data| DB
+    DB -->|Masked Results| MCP
+    MCP -->|JSON Response| USER
+
+    style USER fill:#e1f5ff
+    style MCP fill:#fff4e1
+    style TM fill:#e8f5e9
+    style SEC fill:#ffebee
+    style MYSQL fill:#f3e5f5
+

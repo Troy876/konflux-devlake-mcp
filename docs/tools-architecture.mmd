@@ -1,0 +1,47 @@
+graph LR
+    subgraph "Tools Manager"
+        TM[Tools Manager<br/>Central Coordinator]
+    end
+
+    subgraph "Tool Modules"
+        subgraph "Database Tools"
+            DT1[connect_database]
+            DT2[list_databases]
+            DT3[list_tables]
+            DT4[get_table_schema]
+            DT5[execute_query]
+        end
+        
+        subgraph "Incident Tools"
+            IT1[get_incidents<br/>with deduplication]
+        end
+        
+        subgraph "Deployment Tools"
+            DEP1[get_deployments<br/>with filtering]
+        end
+    end
+
+    subgraph "Base Tool Interface"
+        BASE[BaseTool<br/>Abstract Class]
+    end
+
+    TM -.->|Manages| BASE
+    BASE -.->|Extends| TM
+    TM --> DT1
+    TM --> DT2
+    TM --> DT3
+    TM --> DT4
+    TM --> DT5
+    TM --> IT1
+    TM --> DEP1
+
+    style TM fill:#e8f5e9
+    style BASE fill:#fff4e1
+    style DT1 fill:#e1f5ff
+    style DT2 fill:#e1f5ff
+    style DT3 fill:#e1f5ff
+    style DT4 fill:#e1f5ff
+    style DT5 fill:#e1f5ff
+    style IT1 fill:#fff9c4
+    style DEP1 fill:#f3e5f5
+
