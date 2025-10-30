@@ -9,7 +9,7 @@ from litellm import acompletion, Message
 from mcp.types import TextContent, Tool
 
 
-def _neuter_litellm_logging_worker() -> None:
+def _disable_litellm_logging_worker() -> None:
     """Force-disable litellm logging worker so it cannot spawn background tasks."""
     try:
         from litellm.litellm_core_utils import logging_worker
@@ -47,7 +47,7 @@ def _neuter_litellm_logging_worker() -> None:
         pass
 
 
-_neuter_litellm_logging_worker()
+_disable_litellm_logging_worker()
 
 
 def _disable_litellm_background_workers() -> None:
