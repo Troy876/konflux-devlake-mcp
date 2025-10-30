@@ -12,7 +12,7 @@ from mcp.types import TextContent, Tool
 def _neuter_litellm_logging_worker() -> None:
     """Force-disable litellm logging worker so it cannot spawn background tasks."""
     try:
-        from litellm.litellm_core_utils import logging_worker  # type: ignore
+        from litellm.litellm_core_utils import logging_worker
         try:
             def _noop(*args, **kwargs):
                 return None
