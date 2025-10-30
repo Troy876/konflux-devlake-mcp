@@ -306,6 +306,11 @@ def _append_md_log(section: Dict[str, Any]):
         test_name = os.environ.get("E2E_TEST_NAME", "unknown-test")
         model = section.get("model", "unknown-model")
         asked = section.get("asked", [])
+        dedupe_key = f"{test_name}|{model}|{asked[0] if asked else ''}"
+        global _LOGGED_KEYS
+        if dedupe_key in _LOGGED_KEYS:
+            return
+        _LOGGED_KEYS.add(dedupe_key)
         assistant = section.get("assistant", "")
         tool_calls = section.get("tool_calls", [])
         tool_results = section.get("tool_results", [])

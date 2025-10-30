@@ -1,5 +1,9 @@
 # Konflux DevLake MCP Server
 
+[![Unit Tests](https://github.com/konflux-ci/konflux-devlake-mcp/actions/workflows/unit.yaml/badge.svg)](https://github.com/konflux-ci/konflux-devlake-mcp/actions/workflows/unit.yaml)
+[![Integration Tests](https://github.com/konflux-ci/konflux-devlake-mcp/actions/workflows/integration.yaml/badge.svg)](https://github.com/konflux-ci/konflux-devlake-mcp/actions/workflows/integration.yaml)
+[![E2E Tests](https://github.com/konflux-ci/konflux-devlake-mcp/actions/workflows/e2e.yaml/badge.svg)](https://github.com/konflux-ci/konflux-devlake-mcp/actions/workflows/e2e.yaml)
+
 A MCP server that enables natural language querying of Konflux DevLake databases. This server acts as a bridge between AI assistants and your DevLake database, allowing you to ask questions in plain language and get structured data back.
 
 ## 📚 Documentation
