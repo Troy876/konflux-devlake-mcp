@@ -36,7 +36,7 @@ spec:
         emptyDir: {}
       containers:
       - name: mcp-server
-        image: quay.io/flacatus/mcp-lake:1.0.0
+        image: quay.io/konflux-ci/konflux-devprod/devlake-mcp-server:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
