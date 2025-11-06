@@ -6,6 +6,7 @@ Konflux DevLake MCP Server - Database Connection Utility
 import json
 import logging
 from datetime import datetime, date
+from decimal import Decimal
 from typing import Any, Dict, Optional
 
 import pymysql
@@ -15,22 +16,29 @@ from utils.logger import get_logger, log_database_operation
 
 
 class DateTimeEncoder(json.JSONEncoder):
-    """Custom JSON encoder to handle datetime objects"""
-    
+    """Custom JSON encoder to handle datetime and Decimal objects"""
+
     def default(self, obj):
         if isinstance(obj, (datetime, date)):
             return obj.isoformat()
+        if isinstance(obj, Decimal):
+            # Convert Decimal to string to preserve precision
+            # Use str() instead of float() to avoid precision loss
+            return str(obj)
         return super().default(obj)
 
 
 def serialize_datetime_objects(data):
-    """Recursively serialize datetime objects in data structures"""
+    """Recursively serialize datetime and Decimal objects in data structures"""
     if isinstance(data, dict):
         return {key: serialize_datetime_objects(value) for key, value in data.items()}
     elif isinstance(data, list):
         return [serialize_datetime_objects(item) for item in data]
     elif isinstance(data, (datetime, date)):
         return data.isoformat()
+    elif isinstance(data, Decimal):
+        # Convert Decimal to string to preserve precision
+        return str(data)
     else:
         return data
 
