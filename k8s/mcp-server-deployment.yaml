@@ -33,103 +33,6 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       volumes:
-<<<<<<< HEAD
-      - name: logs-volume
-        emptyDir: {}
-      containers:
-      - name: mcp-server
-        image: quay.io/konflux-ci/konflux-devprod/devlake-mcp-server:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 3000
-          name: http
-        env:
-        # Database connection to existing DevLake
-        - name: DB_HOST
-          valueFrom:
-            secretKeyRef:
-              name: konflux-devlake-secrets
-              key: MYSQL_SERVER
-        - name: DB_PORT
-          valueFrom:
-            secretKeyRef:
-              name: konflux-devlake-secrets
-              key: MYSQL_PORT
-        - name: DB_DATABASE
-          valueFrom:
-            secretKeyRef:
-              name: konflux-devlake-secrets
-              key: MYSQL_DATABASE
-        - name: DB_USER
-          valueFrom:
-            secretKeyRef:
-              name: konflux-devlake-secrets
-              key: MYSQL_USER
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: konflux-devlake-secrets
-              key: MYSQL_PASSWORD
-
-        # Server configuration
-        - name: SERVER_HOST
-          value: "0.0.0.0"
-        - name: SERVER_PORT
-          value: "3000"
-        - name: TRANSPORT
-          value: "http"
-        - name: LOG_LEVEL
-          value: "INFO"
-        - name: LOG_DIR
-          value: "/app/logs"
-        - name: PYTHONPATH
-          value: "/app"
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "250m"
-          limits:
-            memory: "1Gi"
-            cpu: "500m"
-        securityContext:
-          runAsNonRoot: true
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: false
-          capabilities:
-            drop:
-            - ALL
-          seccompProfile:
-            type: RuntimeDefault
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 3
-        command: ["python3"]
-        args: [
-          "konflux-devlake-mcp.py",
-          "--transport", "http",
-          "--host", "0.0.0.0",
-          "--port", "3000",
-          "--db-host", "$(DB_HOST)",
-          "--db-port", "$(DB_PORT)",
-          "--db-user", "$(DB_USER)",
-          "--db-password", "$(DB_PASSWORD)",
-          "--db-database", "$(DB_DATABASE)",
-          "--log-level", "$(LOG_LEVEL)"
-        ]
-        volumeMounts:
-=======
->>>>>>> a6fbb56 (feat: implement test suite for devlake mcp)
         - name: logs-volume
           emptyDir: {}
       containers:
@@ -166,27 +69,26 @@ spec:
                 secretKeyRef:
                   name: konflux-devlake-secrets
                   key: MYSQL_PASSWORD
-
             # Server configuration
             - name: SERVER_HOST
-              value: "0.0.0.0"
+              value: 0.0.0.0
             - name: SERVER_PORT
               value: "3000"
-            - name: SERVER_TRANSPORT
-              value: "http"
+            - name: TRANSPORT
+              value: http
             - name: LOG_LEVEL
-              value: "INFO"
+              value: INFO
             - name: LOG_DIR
-              value: "/app/logs"
+              value: /app/logs
             - name: PYTHONPATH
-              value: "/app"
+              value: /app
           resources:
             requests:
-              memory: "512Mi"
-              cpu: "250m"
+              memory: 512Mi
+              cpu: 250m
             limits:
-              memory: "1Gi"
-              cpu: "500m"
+              memory: 1Gi
+              cpu: 500m
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
@@ -210,19 +112,28 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 5
             timeoutSeconds: 3
-          command: ["python"]
-          args: [
-            "konflux-devlake-mcp.py",
-            "--transport", "http",
-            "--host", "0.0.0.0",
-            "--port", "3000",
-            "--db-host", "$(DB_HOST)",
-            "--db-port", "$(DB_PORT)",
-            "--db-user", "$(DB_USER)",
-            "--db-password", "$(DB_PASSWORD)",
-            "--db-database", "$(DB_DATABASE)",
-            "--log-level", "$(LOG_LEVEL)"
-          ]
+          command:
+            - python3
+          args:
+            - konflux-devlake-mcp.py
+            - --transport
+            - http
+            - --host
+            - 0.0.0.0
+            - --port
+            - "3000"
+            - --db-host
+            - $(DB_HOST)
+            - --db-port
+            - $(DB_PORT)
+            - --db-user
+            - $(DB_USER)
+            - --db-password
+            - $(DB_PASSWORD)
+            - --db-database
+            - $(DB_DATABASE)
+            - --log-level
+            - $(LOG_LEVEL)
           volumeMounts:
             - name: logs-volume
               mountPath: /app/logs

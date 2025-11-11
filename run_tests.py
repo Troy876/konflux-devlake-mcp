@@ -122,15 +122,6 @@ def run_integration_tests(verbose=False):
     if result.stderr:
         print(result.stderr, file=sys.stderr)
 
-    try:
-        import re
-
-        matches = re.findall(r"=+ .* in .* =+", result.stdout)
-        if matches:
-            print(matches[-1])
-    except Exception:
-        pass
-
     return result.returncode == 0
 
 
