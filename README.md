@@ -2,7 +2,7 @@
 
 A MCP server that enables natural language querying of Konflux DevLake databases. This server acts as a bridge between AI assistants and your DevLake database, allowing you to ask questions in plain language and get structured data back.
 
-## 📚 Documentation
+## Documentation
 
 - **[Full Architecture Documentation](./docs/ARCHITECTURE.md)** - Complete system architecture and design patterns
 - **[Documentation Index](./docs/README.md)** - Visual diagrams and documentation catalog
@@ -13,11 +13,12 @@ A MCP server that enables natural language querying of Konflux DevLake databases
 ### Option 1: Python (Development)
 
 1. **Install dependencies**:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-2. **Start the server**:
+1. **Start the server**:
 
 ```bash
 python konflux-devlake-mcp.py --transport http --host 0.0.0.0 --port 3000 --db-host localhost --db-port 3306 --db-user root --db-password password --db-database lake
@@ -26,11 +27,13 @@ python konflux-devlake-mcp.py --transport http --host 0.0.0.0 --port 3000 --db-h
 ### Option 2: Docker (Production)
 
 1. **Build the Docker image**:
+
 ```bash
 docker build -t konflux-devlake-mcp:latest .
 ```
 
-2. **Run the container**:
+1. **Run the container**:
+
 ```bash
 docker run -d \
   --name konflux-mcp-server \
@@ -44,7 +47,8 @@ docker run -d \
   konflux-devlake-mcp:latest
 ```
 
-3. **Push to registry (if needed)**:
+1. **Push to registry (if needed)**:
+
 ```bash
 docker tag konflux-devlake-mcp:latest quay.io/flacatus/mcp-lake:1.0.0
 docker push quay.io/flacatus/mcp-lake:1.0.0
@@ -81,11 +85,13 @@ export LOG_LEVEL=INFO
 ```
 
 Then run:
+
 ```bash
 python konflux-devlake-mcp.py
 ```
 
 ### Help Command
+
 ```bash
 python konflux-devlake-mcp.py --help
 ```
@@ -97,14 +103,17 @@ This server provides several specialized tools for working with your DevLake dat
 - **Database Tools**: Connect to your database, list available databases and tables, execute custom SQL queries, and get detailed table schemas
 - **Incident Analysis**: Get unique incidents with automatic deduplication, analyze incident patterns, and track resolution times
 - **Deployment Tracking**: Monitor deployment data with advanced filtering, track deployment frequency, and analyze service distribution
+- **PR Retest Analysis**: Comprehensive analysis of pull requests that required manual retest commands, including retest patterns, root cause analysis, category breakdowns, and actionable recommendations
 
 ## Features
 
 - **Natural Language Processing**: Convert plain English questions into SQL queries automatically
 - **Security First**: Built-in SQL injection detection and comprehensive query validation to protect your data
-- **DevLake Integration**: Specialized tools for analyzing incident and deployment data from Konflux DevLake
-- **Flexible Transport**: Support for both HTTP and stdio transport protocols
-- **Comprehensive Logging**: Detailed logging with rotation and error tracking for debugging and monitoring
+- **DevLake Integration**: Specialized tools for analyzing incident, deployment, and PR retest data from Konflux DevLake
+- **Token-Efficient Responses**: Uses TOON format for tool responses, reducing token consumption by 30-60% compared to JSON
+- **Project & Repository Filtering**: Advanced filtering capabilities for analyzing data by DevLake project and repository
+- **Flexible Transport**: Support for both HTTP and stdio transport protocols with graceful error handling
+- **Comprehensive Logging**: Detailed logging with rotation, error tracking, and intelligent filtering of expected disconnection errors
 
 ## Security
 

@@ -19,32 +19,32 @@ from utils.db import DateTimeEncoder
 class IncidentTools(BaseTool):
     """
     Incident-related tools for Konflux DevLake MCP Server.
-    
+
     This class provides tools for incident analysis, filtering, and reporting
     with proper error handling and logging.
     """
-    
+
     def __init__(self, db_connection):
         """
         Initialize incident tools.
-        
+
         Args:
             db_connection: Database connection manager
         """
         super().__init__(db_connection)
         self.logger = get_logger(f"{__name__}.IncidentTools")
-    
+
     def get_tools(self) -> List[Tool]:
         """
         Get all incident tools.
-        
+
         Returns:
             List of Tool objects for incident operations
         """
         return [
             Tool(
                 name="get_incidents",
-                description="🚨 **Comprehensive Incident Analysis Tool** - Retrieves unique incidents from the Konflux DevLake database with advanced filtering capabilities. This tool automatically deduplicates incidents by incident_key to show only the most recent version of each incident. Supports filtering by status (e.g., 'DONE', 'IN_PROGRESS', 'OPEN'), component name, and flexible date ranges. Provides comprehensive incident data including incident_key, title, description, status, created_date, resolution_date, lead_time_minutes, component, and URL. Perfect for incident analysis, reporting, and understanding operational issues. Returns incidents sorted by creation date (newest first).",
+                description="**Comprehensive Incident Analysis Tool** - Retrieves unique incidents from the Konflux DevLake database with advanced filtering capabilities. This tool automatically deduplicates incidents by incident_key to show only the most recent version of each incident. Supports filtering by status (e.g., 'DONE', 'IN_PROGRESS', 'OPEN'), component name, and flexible date ranges. Provides comprehensive incident data including incident_key, title, description, status, created_date, resolution_date, lead_time_minutes, component, and URL. Perfect for incident analysis, reporting, and understanding operational issues. Returns incidents sorted by creation date (newest first).",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -60,22 +60,22 @@ class IncidentTools(BaseTool):
                 }
             )
         ]
-    
+
     async def call_tool(self, name: str, arguments: Dict[str, Any]) -> str:
         """
         Execute an incident tool by name.
-        
+
         Args:
             name: Name of the tool to execute
             arguments: Tool arguments
-            
+
         Returns:
             JSON string with tool execution result
         """
         try:
             # Log tool call
             log_tool_call(name, arguments, success=True)
-            
+
             # Route to appropriate tool method
             if name == "get_incidents":
                 result = await self._get_incidents_tool(arguments)
@@ -84,9 +84,9 @@ class IncidentTools(BaseTool):
                     "success": False,
                     "error": f"Unknown incident tool: {name}"
                 }
-            
+
             return json.dumps(result, indent=2, cls=DateTimeEncoder)
-        
+
         except Exception as e:
             self.logger.error(f"Incident tool call failed: {e}")
             log_tool_call(name, arguments, success=False, error=str(e))
@@ -97,14 +97,14 @@ class IncidentTools(BaseTool):
                 "arguments": arguments
             }
             return json.dumps(error_result, indent=2, cls=DateTimeEncoder)
-    
+
     async def _get_incidents_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
         Get unique incidents with comprehensive filtering options.
-        
+
         Args:
             arguments: Tool arguments containing filters
-            
+
         Returns:
             Dictionary with incident data and filtering information
         """
@@ -116,7 +116,7 @@ class IncidentTools(BaseTool):
             end_date = arguments.get("end_date", "")
             date_field = arguments.get("date_field", "created_date")
             limit = arguments.get("limit", 100)
-            
+
             # Validate date_field
             valid_date_fields = ["created_date", "resolution_date", "updated_date"]
             if date_field not in valid_date_fields:
@@ -124,23 +124,23 @@ class IncidentTools(BaseTool):
                     "success": False,
                     "error": f"Invalid date_field '{date_field}'. Must be one of: {', '.join(valid_date_fields)}"
                 }
-            
+
             # Build the base query with deduplication
             base_query = (
                 "SELECT t1.* FROM lake.incidents t1 "
                 "INNER JOIN (SELECT incident_key, MAX(id) AS max_id FROM lake.incidents GROUP BY incident_key) t2 "
                 "ON t1.incident_key = t2.incident_key AND t1.id = t2.max_id "
             )
-            
+
             # Build WHERE clause with filters
             where_conditions = []
-            
+
             if status:
                 where_conditions.append(f"t1.status = '{status}'")
-            
+
             if component:
                 where_conditions.append(f"t1.component = '{component}'")
-            
+
             # Date filtering - prioritize explicit date ranges over days_back
             if start_date or end_date:
                 # Use explicit date range filtering
@@ -149,7 +149,7 @@ class IncidentTools(BaseTool):
                     if len(start_date) == 10:  # YYYY-MM-DD format
                         start_date = f"{start_date} 00:00:00"
                     where_conditions.append(f"t1.{date_field} >= '{start_date}'")
-                
+
                 if end_date:
                     # If end_date doesn't have time, assume 23:59:59 to capture full day
                     if len(end_date) == 10:  # YYYY-MM-DD format
@@ -161,19 +161,19 @@ class IncidentTools(BaseTool):
                 start_date_calc = datetime.now() - timedelta(days=days_back)
                 start_date_str = start_date_calc.strftime('%Y-%m-%d %H:%M:%S')
                 where_conditions.append(f"t1.{date_field} >= '{start_date_str}'")
-            
+
             # Add WHERE clause if we have conditions
             if where_conditions:
                 base_query += "WHERE " + " AND ".join(where_conditions) + " "
-            
+
             # Add ordering and limit
             base_query += f"ORDER BY t1.{date_field} DESC "
             base_query += f"LIMIT {limit}"
-            
+
             self.logger.info(f"Getting incidents with filters: status={status}, component={component}, days_back={days_back}, start_date={start_date}, end_date={end_date}, date_field={date_field}, limit={limit}")
-            
+
             result = await self.db_connection.execute_query(base_query, limit)
-            
+
             if result["success"]:
                 return {
                     "success": True,
@@ -189,9 +189,9 @@ class IncidentTools(BaseTool):
                     "query": base_query,
                     "incidents": result["data"]
                 }
-            
+
             return result
-            
+
         except Exception as e:
             self.logger.error(f"Get incidents failed: {e}")
-            return {"success": False, "error": str(e)} 
+            return {"success": False, "error": str(e)}
