@@ -199,6 +199,7 @@ async def run_server(config: KonfluxDevLakeConfig) -> int:
                 "port": config.server.port,
                 "timeout_keep_alive": config.server.timeout_keep_alive,
                 "timeout_graceful_shutdown": config.server.timeout_graceful_shutdown,
+                "config": config,
             }
             if config.server.transport == "http"
             else {}
@@ -226,9 +227,17 @@ async def run_server(config: KonfluxDevLakeConfig) -> int:
             logger.info("Server shutdown complete")
         except (asyncio.CancelledError, KeyboardInterrupt):
             # Ignore cancellation errors during shutdown
-            logger.debug("Shutdown interrupted")
+            pass
+        except (ValueError, OSError):
+            # Ignore I/O errors during shutdown (handlers may be closed)
+            pass
         except Exception as e:
-            logger.error(f"Error during shutdown: {e}")
+            # Only log non-I/O errors during shutdown
+            try:
+                logger.error(f"Error during shutdown: {e}")
+            except (ValueError, OSError):
+                # If logging fails, just pass silently
+                pass
 
 
 async def main():
