@@ -87,8 +87,9 @@ def _setup_logging() -> logging.Logger:
     # Clear existing handlers
     root_logger.handlers.clear()
 
-    # Console handler with filter
-    console_handler = logging.StreamHandler(sys.stdout)
+    # Console handler with filter - use stderr for stdio transport compatibility
+    # When using stdio transport, stdout must only contain JSONRPC messages
+    console_handler = logging.StreamHandler(sys.stderr)
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)
     console_handler.addFilter(closed_resource_filter)
@@ -218,16 +219,24 @@ def log_tool_call(tool_name: str, arguments: dict = None, success: bool = True, 
 
 def shutdown_logging():
     """Shutdown logging system"""
-    logger = get_logger(__name__)
-    logger.info("Shutting down logging system")
+    try:
+        logger = get_logger(__name__)
+        logger.info("Shutting down logging system")
 
-    # Flush all handlers
-    root_logger = logging.getLogger()
-    for handler in root_logger.handlers:
-        handler.flush()
-        handler.close()
+        # Flush all handlers
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers:
+            try:
+                handler.flush()
+                handler.close()
+            except (ValueError, OSError):
+                # Ignore errors when closing handlers (file may already be closed)
+                pass
 
-    logger.info("Logging system shutdown complete")
+        logger.info("Logging system shutdown complete")
+    except (ValueError, OSError):
+        # Ignore errors during shutdown (handlers may already be closed)
+        pass
 
 
 class LoggerMixin:

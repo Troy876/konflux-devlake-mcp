@@ -30,6 +30,7 @@ class HttpTransport(BaseTransport):
         port: int = 3000,
         timeout_keep_alive: int = 600,
         timeout_graceful_shutdown: int = 120,
+        config=None,
     ):
         """
         Initialize the HTTP transport.
@@ -39,11 +40,13 @@ class HttpTransport(BaseTransport):
             port: Port number to listen on
             timeout_keep_alive: Keep-alive timeout in seconds (default: 600 for LLM connections)
             timeout_graceful_shutdown: Graceful shutdown timeout in seconds (default: 120)
+            config: Optional configuration object for security manager
         """
         self.host = host
         self.port = port
         self.timeout_keep_alive = timeout_keep_alive
         self.timeout_graceful_shutdown = timeout_graceful_shutdown
+        self.config = config
         self.logger = get_logger(f"{__name__}.HttpTransport")
         self._session_manager = None
         self._server = None
@@ -173,6 +176,50 @@ class HttpTransport(BaseTransport):
 
         session_manager.handle_request = wrapped_handle_request
         return session_manager
+
+    def _create_health_endpoints(self):
+        """Create ASGI app for health check and security endpoints."""
+        from starlette.applications import Starlette
+        from starlette.responses import JSONResponse
+        from starlette.routing import Route
+        from utils.security import KonfluxDevLakeSecurityManager
+
+        # Create a minimal config object if not provided
+        if self.config is None:
+
+            class MinimalConfig:
+                allowed_ips = []
+                api_keys = {}
+
+            config = MinimalConfig()
+        else:
+            config = self.config
+
+        security_manager = KonfluxDevLakeSecurityManager(config)
+
+        async def health_check(request):
+            """Health check endpoint."""
+            return JSONResponse(
+                {
+                    "status": "healthy",
+                    "service": "konflux-devlake-mcp-server",
+                    "transport": "http",
+                }
+            )
+
+        async def security_stats(request):
+            """Security statistics endpoint."""
+            stats = security_manager.get_security_stats()
+            return JSONResponse(stats)
+
+        app = Starlette(
+            routes=[
+                Route("/health", health_check, methods=["GET"]),
+                Route("/security/stats", security_stats, methods=["GET"]),
+            ]
+        )
+
+        return app
 
     def _create_mcp_app(self, app):
         """Create ASGI app that handles MCP requests with improved error handling."""

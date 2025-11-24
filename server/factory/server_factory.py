@@ -85,11 +85,13 @@ class ServerFactory:
             port = kwargs.get("port", 3000)
             timeout_keep_alive = kwargs.get("timeout_keep_alive", 300)
             timeout_graceful_shutdown = kwargs.get("timeout_graceful_shutdown", 60)
+            config = kwargs.get("config")
             return HttpTransport(
                 host=host,
                 port=port,
                 timeout_keep_alive=timeout_keep_alive,
                 timeout_graceful_shutdown=timeout_graceful_shutdown,
+                config=config,
             )
         else:
             raise ValueError(f"Unsupported transport type: {transport_type}")
