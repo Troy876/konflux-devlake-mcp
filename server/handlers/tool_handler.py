@@ -89,7 +89,7 @@ class ToolHandler:
                     return {
                         "valid": False,
                         "error": f"SQL query validation failed: {validation_msg}",
-                        "security_check": "failed"
+                        "security_check": "failed",
                     }
 
                 # Check for SQL injection
@@ -100,7 +100,7 @@ class ToolHandler:
                         "valid": False,
                         "error": "Potential SQL injection detected",
                         "security_check": "failed",
-                        "detected_patterns": patterns
+                        "detected_patterns": patterns,
                     }
 
         # Validate database and table names
@@ -112,7 +112,7 @@ class ToolHandler:
                 return {
                     "valid": False,
                     "error": f"Database name validation failed: {validation_msg}",
-                    "security_check": "failed"
+                    "security_check": "failed",
                 }
 
         if name == "get_table_schema":
@@ -123,7 +123,7 @@ class ToolHandler:
                 return {
                     "valid": False,
                     "error": f"Table name validation failed: {validation_msg}",
-                    "security_check": "failed"
+                    "security_check": "failed",
                 }
 
         return {"valid": True}

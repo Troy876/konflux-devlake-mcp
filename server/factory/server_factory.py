@@ -6,8 +6,6 @@ This module provides a factory pattern for creating and configuring MCP servers
 with different transport layers and configurations.
 """
 
-from typing import Optional
-
 from server.core.mcp_server import KonfluxDevLakeMCPServer
 from server.transport.base_transport import BaseTransport
 from server.transport.stdio_transport import StdioTransport
@@ -58,7 +56,7 @@ class ServerFactory:
             config=config,
             db_connection=db_connection,
             tools_manager=tools_manager,
-            security_manager=security_manager
+            security_manager=security_manager,
         )
 
         self.logger.info("MCP server created successfully")

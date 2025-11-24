@@ -5,7 +5,6 @@ STDIO Transport Implementation
 This module provides the STDIO transport layer for local MCP server communication.
 """
 
-from datetime import datetime
 from typing import Dict, Any
 
 from mcp.server import Server
@@ -44,9 +43,7 @@ class StdioTransport(BaseTransport):
                 init_options = InitializationOptions(
                     server_name="konflux-devlake-mcp-server",
                     server_version="1.0.0",
-                    capabilities={
-                        "tools": {}
-                    }
+                    capabilities={"tools": {}},
                 )
 
                 await server.run(read_stream, write_stream, init_options)

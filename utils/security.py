@@ -3,15 +3,10 @@
 Konflux DevLake MCP Server - Security Utility
 """
 
-import hashlib
-import hmac
-import logging
 import re
 import secrets
-import string
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import urlparse
+from typing import Any, Dict, List, Tuple
 
 from utils.logger import get_logger
 
@@ -22,8 +17,8 @@ class KonfluxDevLakeSecurityManager:
     def __init__(self, config):
         self.config = config
         self.logger = get_logger(f"{__name__}.KonfluxDevLakeSecurityManager")
-        self.allowed_ips = getattr(config, 'allowed_ips', [])
-        self.api_keys = getattr(config, 'api_keys', {})
+        self.allowed_ips = getattr(config, "allowed_ips", [])
+        self.api_keys = getattr(config, "api_keys", {})
         self.session_tokens = {}
         self.rate_limits = {}
 
@@ -34,24 +29,35 @@ class KonfluxDevLakeSecurityManager:
             query_lower = query.lower().strip()
 
             # Check if it's a SELECT query - ALLOW ALL SELECT QUERIES
-            if query_lower.startswith('select'):
+            if query_lower.startswith("select"):
                 self.logger.info("SELECT query detected - allowing all SELECT operations")
                 return True, "SELECT query allowed"
 
             # Check for dangerous operations (only for non-SELECT queries)
             dangerous_keywords = [
-                'drop', 'delete', 'truncate', 'alter', 'create', 'insert', 'update',
-                'grant', 'revoke', 'backup', 'restore', 'shutdown', 'kill'
+                "drop",
+                "delete",
+                "truncate",
+                "alter",
+                "create",
+                "insert",
+                "update",
+                "grant",
+                "revoke",
+                "backup",
+                "restore",
+                "shutdown",
+                "kill",
             ]
 
             # Check for dangerous patterns (only for non-SELECT queries)
             dangerous_patterns = [
-                r';\s*$',  # Multiple statements
-                r'--',     # SQL comments
-                r'/\*.*?\*/',  # Multi-line comments
-                r'union\s+select',  # UNION attacks
-                r'exec\s*\(',  # Command execution
-                r'xp_cmdshell',  # SQL Server command shell
+                r";\s*$",  # Multiple statements
+                r"--",  # SQL comments
+                r"/\*.*?\*/",  # Multi-line comments
+                r"union\s+select",  # UNION attacks
+                r"exec\s*\(",  # Command execution
+                r"xp_cmdshell",  # SQL Server command shell
             ]
 
             # Check for dangerous keywords (only for non-SELECT queries)
@@ -67,7 +73,7 @@ class KonfluxDevLakeSecurityManager:
                     return False, f"Dangerous SQL pattern detected"
 
             # Check for balanced parentheses
-            if query_lower.count('(') != query_lower.count(')'):
+            if query_lower.count("(") != query_lower.count(")"):
                 self.logger.warning("Unbalanced parentheses in SQL query")
                 return False, "Unbalanced parentheses in SQL query"
 
@@ -88,7 +94,7 @@ class KonfluxDevLakeSecurityManager:
             return ""
 
         # Remove potentially dangerous characters
-        dangerous_chars = ['<', '>', '"', "'", '&', ';', '|', '`', '$', '(', ')', '{', '}']
+        dangerous_chars = ["<", ">", '"', "'", "&", ";", "|", "`", "$", "(", ")", "{", "}"]
         sanitized = input_str
 
         for char in dangerous_chars:
@@ -105,7 +111,7 @@ class KonfluxDevLakeSecurityManager:
             return False, "Database name cannot be empty"
 
         # Check for valid characters
-        if not re.match(r'^[a-zA-Z0-9_]+$', db_name):
+        if not re.match(r"^[a-zA-Z0-9_]+$", db_name):
             return False, "Database name contains invalid characters"
 
         # Check length
@@ -114,8 +120,13 @@ class KonfluxDevLakeSecurityManager:
 
         # Check for reserved words
         reserved_words = [
-            'information_schema', 'mysql', 'performance_schema', 'sys',
-            'test', 'tmp', 'temp'
+            "information_schema",
+            "mysql",
+            "performance_schema",
+            "sys",
+            "test",
+            "tmp",
+            "temp",
         ]
 
         if db_name.lower() in reserved_words:
@@ -129,7 +140,7 @@ class KonfluxDevLakeSecurityManager:
             return False, "Table name cannot be empty"
 
         # Check for valid characters
-        if not re.match(r'^[a-zA-Z0-9_]+$', table_name):
+        if not re.match(r"^[a-zA-Z0-9_]+$", table_name):
             return False, "Table name contains invalid characters"
 
         # Check length
@@ -160,9 +171,9 @@ class KonfluxDevLakeSecurityManager:
 
         # Check if key exists
         for user_id, key_info in self.api_keys.items():
-            if key_info['key'] == api_key:
+            if key_info["key"] == api_key:
                 # Update last used time
-                key_info['last_used'] = datetime.now()
+                key_info["last_used"] = datetime.now()
                 return True, f"Valid API key for user: {user_id}"
 
         return False, "Invalid API key"
@@ -173,9 +184,9 @@ class KonfluxDevLakeSecurityManager:
         expiry = datetime.now() + timedelta(hours=24)
 
         self.session_tokens[token] = {
-            'user_id': user_id,
-            'created': datetime.now(),
-            'expires': expiry
+            "user_id": user_id,
+            "created": datetime.now(),
+            "expires": expiry,
         }
 
         self.logger.info(f"Generated session token for user: {user_id}")
@@ -192,7 +203,7 @@ class KonfluxDevLakeSecurityManager:
         token_info = self.session_tokens[token]
 
         # Check if token has expired
-        if datetime.now() > token_info['expires']:
+        if datetime.now() > token_info["expires"]:
             del self.session_tokens[token]
             return False, "Session token has expired"
 
@@ -208,8 +219,7 @@ class KonfluxDevLakeSecurityManager:
 
         # Remove old entries (older than 1 minute)
         self.rate_limits[key] = [
-            time for time in self.rate_limits[key]
-            if current_time - time < timedelta(minutes=1)
+            time for time in self.rate_limits[key] if current_time - time < timedelta(minutes=1)
         ]
 
         # Check if rate limit exceeded (max 100 operations per minute)
@@ -238,7 +248,7 @@ class KonfluxDevLakeSecurityManager:
         expired_tokens = []
 
         for token, token_info in self.session_tokens.items():
-            if current_time > token_info['expires']:
+            if current_time > token_info["expires"]:
                 expired_tokens.append(token)
 
         for token in expired_tokens:
@@ -250,10 +260,10 @@ class KonfluxDevLakeSecurityManager:
     def get_security_stats(self) -> Dict[str, Any]:
         """Get security statistics"""
         return {
-            'active_api_keys': len(self.api_keys),
-            'active_session_tokens': len(self.session_tokens),
-            'rate_limit_entries': len(self.rate_limits),
-            'allowed_ips': len(self.allowed_ips)
+            "active_api_keys": len(self.api_keys),
+            "active_session_tokens": len(self.session_tokens),
+            "rate_limit_entries": len(self.rate_limits),
+            "allowed_ips": len(self.allowed_ips),
         }
 
 
@@ -294,7 +304,7 @@ class SQLInjectionDetector:
 
         # Allow all SELECT queries
         query_lower = query.lower().strip()
-        if query_lower.startswith('select'):
+        if query_lower.startswith("select"):
             self.logger.info("SELECT query detected - allowing all SELECT operations")
             return False, []
 
@@ -314,7 +324,7 @@ class SQLInjectionDetector:
     def is_safe_query(self, query: str) -> bool:
         """Check if query is safe - ALLOWS ALL SELECT QUERIES"""
         # Allow all SELECT queries
-        if query.lower().strip().startswith('select'):
+        if query.lower().strip().startswith("select"):
             return True
 
         is_injection, _ = self.detect_sql_injection(query)
@@ -329,11 +339,11 @@ class DataMasking:
 
         # Sensitive data patterns
         self.sensitive_patterns = {
-            'email': r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
-            'phone': r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b',
-            'ssn': r'\b\d{3}-\d{2}-\d{4}\b',
-            'credit_card': r'\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b',
-            'ip_address': r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b'
+            "email": r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
+            "phone": r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b",
+            "ssn": r"\b\d{3}-\d{2}-\d{4}\b",
+            "credit_card": r"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b",
+            "ip_address": r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b",
         }
 
     def mask_sensitive_data(self, data: str) -> str:
@@ -345,9 +355,9 @@ class DataMasking:
 
         # Mask email addresses
         masked_data = re.sub(
-            self.sensitive_patterns['email'],
-            lambda m: m.group(0)[:3] + '***@' + m.group(0).split('@')[1],
-            masked_data
+            self.sensitive_patterns["email"],
+            lambda m: m.group(0)[:3] + "***@" + m.group(0).split("@")[1],
+            masked_data,
         )
 
         # Mask phone numbers
@@ -366,9 +376,7 @@ class DataMasking:
 
         # Mask credit card numbers
         masked_data = re.sub(
-            self.sensitive_patterns['credit_card'],
-            '****-****-****-****',
-            masked_data
+            self.sensitive_patterns["credit_card"], "****-****-****-****", masked_data
         )
 
         # Mask IP addresses
@@ -388,9 +396,11 @@ class DataMasking:
         # Handle list of records
         if isinstance(result, list):
             return [
-                self.mask_database_result(item) if isinstance(item, dict)
-                else self.mask_sensitive_data(str(item)) if isinstance(item, str)
-                else item
+                (
+                    self.mask_database_result(item)
+                    if isinstance(item, dict)
+                    else self.mask_sensitive_data(str(item)) if isinstance(item, str) else item
+                )
                 for item in result
             ]
 

@@ -99,7 +99,7 @@ class KonfluxDevLakeToolsManager:
                 error_result = {
                     "success": False,
                     "error": f"Unknown tool: {name}",
-                    "available_tools": list(self._tool_mapping.keys())
+                    "available_tools": list(self._tool_mapping.keys()),
                 }
                 return json.dumps(error_result, indent=2)
 
@@ -116,7 +116,7 @@ class KonfluxDevLakeToolsManager:
                 "success": False,
                 "error": str(e),
                 "tool_name": name,
-                "arguments": arguments
+                "arguments": arguments,
             }
             return json.dumps(error_result, indent=2)
 
@@ -138,7 +138,7 @@ class KonfluxDevLakeToolsManager:
             "total_tools": total_tools,
             "modules": len(self._tool_modules),
             "tools_by_module": tools_by_module,
-            "available_tools": list(self._tool_mapping.keys())
+            "available_tools": list(self._tool_mapping.keys()),
         }
 
     def validate_tool_exists(self, name: str) -> bool:

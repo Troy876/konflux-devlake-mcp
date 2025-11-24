@@ -66,10 +66,18 @@ class DatabaseTools(BaseTool):
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "database": {"type": "string", "description": "Database name to explore. Common options: 'lake' (main DevLake data), 'information_schema' (MySQL system tables), 'test_db' (test database)"}
+                        "database": {
+                            "type": "string",
+                            "description": (
+                                "Database name to explore. Common options: "
+                                "'lake' (main DevLake data), "
+                                "'information_schema' (MySQL system tables), "
+                                "'test_db' (test database)"
+                            ),
+                        }
                     },
-                    "required": ["database"]
-                }
+                    "required": ["database"],
+                },
             ),
             Tool(
                 name="get_table_schema",
@@ -77,11 +85,25 @@ class DatabaseTools(BaseTool):
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "database": {"type": "string", "description": "Database name containing the table. Use 'lake' for main DevLake tables like incidents, deployments, etc."},
-                        "table": {"type": "string", "description": "Table name to inspect. Common tables: 'incidents', 'cicd_deployments', 'cicd_deployment_commits', 'project_mapping'"}
+                        "database": {
+                            "type": "string",
+                            "description": (
+                                "Database name containing the table. Use 'lake' "
+                                "for main DevLake tables like incidents, "
+                                "deployments, etc."
+                            ),
+                        },
+                        "table": {
+                            "type": "string",
+                            "description": (
+                                "Table name to inspect. Common tables: "
+                                "'incidents', 'cicd_deployments', "
+                                "'cicd_deployment_commits', 'project_mapping'"
+                            ),
+                        },
                     },
-                    "required": ["database", "table"]
-                }
+                    "required": ["database", "table"],
+                },
             ),
             Tool(
                 name="execute_query",
@@ -92,9 +114,9 @@ class DatabaseTools(BaseTool):
                         "query": {"type": "string", "description": "SQL query to execute (e.g., 'SELECT * FROM lake.incidents LIMIT 10'). WARNING: Only use SELECT queries for safety."},
                         "limit": {"type": "integer", "description": "Maximum number of rows to return (default: 100, max: 1000)"}
                     },
-                    "required": ["query"]
-                }
-            )
+                    "required": ["query"],
+                },
+            ),
         ]
 
     async def call_tool(self, name: str, arguments: Dict[str, Any]) -> str:
@@ -138,7 +160,7 @@ class DatabaseTools(BaseTool):
                 "success": False,
                 "error": str(e),
                 "tool_name": name,
-                "arguments": arguments
+                "arguments": arguments,
             }
             return json.dumps(error_result, indent=2, cls=DateTimeEncoder)
 
@@ -209,27 +231,44 @@ class DatabaseTools(BaseTool):
 
             # Check for dangerous SQL operations (only as whole words)
             dangerous_keywords = [
-                "DROP", "DELETE", "UPDATE", "INSERT", "CREATE", "ALTER", 
-                "TRUNCATE", "GRANT", "REVOKE", "EXEC", "EXECUTE"
+                "DROP",
+                "DELETE",
+                "UPDATE",
+                "INSERT",
+                "CREATE",
+                "ALTER",
+                "TRUNCATE",
+                "GRANT",
+                "REVOKE",
+                "EXEC",
+                "EXECUTE",
             ]
 
             for keyword in dangerous_keywords:
                 # Use word boundaries to avoid false positives like "created_date"
                 import re
-                pattern = r'\b' + re.escape(keyword) + r'\b'
+
+                pattern = r"\b" + re.escape(keyword) + r"\b"
                 if re.search(pattern, query_upper):
                     return {
-                        "success": False, 
-                        "error": f"Query contains dangerous keyword '{keyword}'. Only SELECT queries are allowed for security reasons.",
-                        "security_check": "failed"
+                        "success": False,
+                        "error": (
+                            f"Query contains dangerous keyword '{keyword}'. "
+                            "Only SELECT queries are allowed for security "
+                            "reasons."
+                        ),
+                        "security_check": "failed",
                     }
 
             # Ensure query starts with SELECT
             if not query_upper.startswith("SELECT"):
                 return {
                     "success": False,
-                    "error": "Query must start with SELECT for security reasons. Only read operations are allowed.",
-                    "security_check": "failed"
+                    "error": (
+                        "Query must start with SELECT for security reasons. "
+                        "Only read operations are allowed."
+                    ),
+                    "security_check": "failed",
                 }
 
             # Log the query for security monitoring

@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Dict, Any
 
 from mcp.server import Server
+
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from anyio import ClosedResourceError
 
@@ -68,13 +69,13 @@ class HttpTransport(BaseTransport):
 
             # Start server with improved configuration
             config = uvicorn.Config(
-                app=mcp_app, 
-                host=self.host, 
-                port=self.port, 
+                app=mcp_app,
+                host=self.host,
+                port=self.port,
                 log_level="info",
                 access_log=True,
                 timeout_keep_alive=30,  # Keep-alive timeout
-                timeout_graceful_shutdown=30  # Graceful shutdown timeout
+                timeout_graceful_shutdown=30,  # Graceful shutdown timeout
             )
             self._server = uvicorn.Server(config)
 
@@ -160,46 +161,21 @@ class HttpTransport(BaseTransport):
         session_manager.handle_request = wrapped_handle_request
         return session_manager
 
-    def _create_health_endpoints(self):
-        """Create health check and monitoring endpoints."""
-        from starlette.applications import Starlette
-        from starlette.requests import Request
-        from starlette.responses import JSONResponse
-        from starlette.routing import Route
-
-        async def health_check(request: Request):
-            return JSONResponse({
-                "status": "healthy", 
-                "service": "konflux-devlake-mcp-server",
-                "timestamp": datetime.now().isoformat(),
-                "transport": self.get_transport_info()
-            })
-
-        async def security_stats(request: Request):
-            return JSONResponse({
-                "timestamp": datetime.now().isoformat(),
-                "transport": self.get_transport_info()
-            })
-
-        return Starlette(routes=[
-            Route("/health", health_check, methods=["GET"]),
-            Route("/security/stats", security_stats, methods=["GET"]),
-        ])
 
     def _create_mcp_app(self, app):
         """Create ASGI app that handles MCP requests with improved error handling."""
         from starlette.responses import Response
         from anyio import ClosedResourceError
-
+        
         async def mcp_app(scope, receive, send):
             try:
                 if scope["type"] == "http":
                     path = scope.get("path", "")
-
+                    
                     if path.startswith("/health") or path.startswith("/security"):
                         await app(scope, receive, send)
                         return
-
+                    
                     if path == "/mcp" or path.startswith("/mcp/"):
                         try:
                             self.logger.debug(f"Handling MCP request: {path}")
@@ -223,7 +199,7 @@ class HttpTransport(BaseTransport):
                                 # Connection already closed, can't send response
                                 self.logger.debug("Connection closed before error response could be sent")
                         return
-
+                    
                     # 404 for other paths
                     response = Response("Not Found", status_code=404)
                     await response(scope, receive, send)
@@ -245,7 +221,7 @@ class HttpTransport(BaseTransport):
                 except (ClosedResourceError, BrokenPipeError, ConnectionResetError):
                     # Connection already closed, can't send response
                     self.logger.debug("Connection closed before error response could be sent")
-
+        
         return mcp_app
 
     async def stop(self) -> None:

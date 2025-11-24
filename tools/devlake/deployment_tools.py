@@ -48,16 +48,52 @@ class DeploymentTools(BaseTool):
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "project": {"type": "string", "description": "Project name to filter by (default: 'Konflux_Pilot_Team'). Leave empty to get all projects."},
-                        "environment": {"type": "string", "description": "Environment to filter by (default: 'PRODUCTION', options: 'PRODUCTION', 'STAGING', 'DEVELOPMENT'). Leave empty to get all environments."},
-                        "days_back": {"type": "integer", "description": "Number of days back to include in results (default: 30, max: 365). Leave empty to get all deployments."},
-                        "start_date": {"type": "string", "description": "Start date for filtering (format: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS). Leave empty for no start date limit."},
-                        "end_date": {"type": "string", "description": "End date for filtering (format: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS). Leave empty for no end date limit."},
-                        "date_field": {"type": "string", "description": "Date field to filter on: 'finished_date', 'created_date', or 'updated_date' (default: 'finished_date')."},
-                        "limit": {"type": "integer", "description": "Maximum number of deployments to return (default: 50, max: 200)"}
+                        "project": {
+                            "type": "string",
+                            "description": "Project name to filter by "
+                            "(default: 'Konflux_Pilot_Team'). "
+                            "Leave empty to get all projects.",
+                        },
+                        "environment": {
+                            "type": "string",
+                            "description": "Environment to filter by (default: "
+                            "'PRODUCTION', options: 'PRODUCTION', "
+                            "'STAGING', 'DEVELOPMENT'). Leave "
+                            "empty to get all environments.",
+                        },
+                        "days_back": {
+                            "type": "integer",
+                            "description": "Number of days back to include in "
+                            "results (default: 30, max: 365). "
+                            "Leave empty to get all deployments.",
+                        },
+                        "start_date": {
+                            "type": "string",
+                            "description": "Start date for filtering (format: "
+                            "YYYY-MM-DD or YYYY-MM-DD HH:MM:SS). "
+                            "Leave empty for no start date limit.",
+                        },
+                        "end_date": {
+                            "type": "string",
+                            "description": "End date for filtering (format: "
+                            "YYYY-MM-DD or YYYY-MM-DD HH:MM:SS). "
+                            "Leave empty for no end date limit.",
+                        },
+                        "date_field": {
+                            "type": "string",
+                            "description": "Date field to filter on: "
+                            "'finished_date', 'created_date', or "
+                            "'updated_date' (default: "
+                            "'finished_date').",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum number of deployments to "
+                            "return (default: 50, max: 200)",
+                        },
                     },
-                    "required": []
-                }
+                    "required": [],
+                },
             )
         ]
 
@@ -94,7 +130,7 @@ class DeploymentTools(BaseTool):
                 "success": False,
                 "error": str(e),
                 "tool_name": name,
-                "arguments": arguments
+                "arguments": arguments,
             }
             return json.dumps(error_result, indent=2, cls=DateTimeEncoder)
 
@@ -122,7 +158,10 @@ class DeploymentTools(BaseTool):
             if date_field not in valid_date_fields:
                 return {
                     "success": False,
-                    "error": f"Invalid date_field '{date_field}'. Must be one of: {', '.join(valid_date_fields)}"
+                    "error": (
+                        f"Invalid date_field '{date_field}'. Must be one of: "
+                        f"{', '.join(valid_date_fields)}"
+                    ),
                 }
 
             # Build the query using the exact structure provided
@@ -130,7 +169,9 @@ class DeploymentTools(BaseTool):
             WITH _deployment_commit_rank AS (
                 SELECT
                     pm.project_name,
-                    IF(cdc._raw_data_table != '', cdc._raw_data_table, cdc.cicd_scope_id) as _raw_data_table,
+                    IF(cdc._raw_data_table != '',
+                       cdc._raw_data_table,
+                       cdc.cicd_scope_id) as _raw_data_table,
                     cdc.id,
                     cdc.display_title,
                     cdc.url,
@@ -139,9 +180,14 @@ class DeploymentTools(BaseTool):
                     result,
                     environment,
                     finished_date,
-                    row_number() OVER(PARTITION BY cdc.cicd_deployment_id ORDER BY finished_date DESC) as _deployment_commit_rank
+                    row_number() OVER(
+                        PARTITION BY cdc.cicd_deployment_id
+                        ORDER BY finished_date DESC
+                    ) as _deployment_commit_rank
                 FROM lake.cicd_deployment_commits cdc
-                LEFT JOIN lake.project_mapping pm ON cdc.cicd_scope_id = pm.row_id AND pm.`table` = 'cicd_scopes'
+                LEFT JOIN lake.project_mapping pm
+                    ON cdc.cicd_scope_id = pm.row_id
+                    AND pm.`table` = 'cicd_scopes'
                 WHERE 1=1
             """
 
@@ -177,8 +223,9 @@ class DeploymentTools(BaseTool):
             elif days_back > 0:
                 # Fall back to days_back filtering
                 from datetime import datetime, timedelta
+
                 start_date_calc = datetime.now() - timedelta(days=days_back)
-                start_date_str = start_date_calc.strftime('%Y-%m-%d %H:%M:%S')
+                start_date_str = start_date_calc.strftime("%Y-%m-%d %H:%M:%S")
                 where_conditions.append(f"finished_date >= '{start_date_str}'")
 
             # Add WHERE conditions to the CTE
@@ -219,10 +266,10 @@ class DeploymentTools(BaseTool):
                         "start_date": start_date if start_date else "all",
                         "end_date": end_date if end_date else "all",
                         "date_field": date_field,
-                        "limit": limit
+                        "limit": limit,
                     },
                     "query": base_query,
-                    "deployments": result["data"]
+                    "deployments": result["data"],
                 }
 
             return result

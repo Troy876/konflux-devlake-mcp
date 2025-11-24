@@ -48,16 +48,50 @@ class IncidentTools(BaseTool):
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "status": {"type": "string", "description": "Filter incidents by status (e.g., 'DONE', 'IN_PROGRESS', 'OPEN'). Leave empty to get all statuses."},
-                        "component": {"type": "string", "description": "Filter incidents by component name. Leave empty to get all components."},
-                        "days_back": {"type": "integer", "description": "Number of days back to include in results (default: 30, max: 365). Leave empty to get all incidents."},
-                        "start_date": {"type": "string", "description": "Start date for filtering (format: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS). Leave empty for no start date limit."},
-                        "end_date": {"type": "string", "description": "End date for filtering (format: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS). Leave empty for no end date limit."},
-                        "date_field": {"type": "string", "description": "Date field to filter on: 'created_date', 'resolution_date', or 'updated_date' (default: 'created_date')."},
-                        "limit": {"type": "integer", "description": "Maximum number of incidents to return (default: 100, max: 500)"}
+                        "status": {
+                            "type": "string",
+                            "description": "Filter incidents by status (e.g., "
+                            "'DONE', 'IN_PROGRESS', 'OPEN'). "
+                            "Leave empty to get all statuses.",
+                        },
+                        "component": {
+                            "type": "string",
+                            "description": "Filter incidents by component name. "
+                            "Leave empty to get all components.",
+                        },
+                        "days_back": {
+                            "type": "integer",
+                            "description": "Number of days back to include in "
+                            "results (default: 30, max: 365). "
+                            "Leave empty to get all incidents.",
+                        },
+                        "start_date": {
+                            "type": "string",
+                            "description": "Start date for filtering (format: "
+                            "YYYY-MM-DD or YYYY-MM-DD HH:MM:SS). "
+                            "Leave empty for no start date limit.",
+                        },
+                        "end_date": {
+                            "type": "string",
+                            "description": "End date for filtering (format: "
+                            "YYYY-MM-DD or YYYY-MM-DD HH:MM:SS). "
+                            "Leave empty for no end date limit.",
+                        },
+                        "date_field": {
+                            "type": "string",
+                            "description": "Date field to filter on: "
+                            "'created_date', 'resolution_date', "
+                            "or 'updated_date' (default: "
+                            "'created_date').",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum number of incidents to "
+                            "return (default: 100, max: 500)",
+                        },
                     },
-                    "required": []
-                }
+                    "required": [],
+                },
             )
         ]
 
@@ -94,7 +128,7 @@ class IncidentTools(BaseTool):
                 "success": False,
                 "error": str(e),
                 "tool_name": name,
-                "arguments": arguments
+                "arguments": arguments,
             }
             return json.dumps(error_result, indent=2, cls=DateTimeEncoder)
 
@@ -122,55 +156,13 @@ class IncidentTools(BaseTool):
             if date_field not in valid_date_fields:
                 return {
                     "success": False,
-                    "error": f"Invalid date_field '{date_field}'. Must be one of: {', '.join(valid_date_fields)}"
+                    "error": (
+                        f"Invalid date_field '{date_field}'. Must be one of: "
+                        f"{', '.join(valid_date_fields)}"
+                    ),
                 }
 
             # Build the base query with deduplication
-            base_query = (
-                "SELECT t1.* FROM lake.incidents t1 "
-                "INNER JOIN (SELECT incident_key, MAX(id) AS max_id FROM lake.incidents GROUP BY incident_key) t2 "
-                "ON t1.incident_key = t2.incident_key AND t1.id = t2.max_id "
-            )
-
-            # Build WHERE clause with filters
-            where_conditions = []
-
-            if status:
-                where_conditions.append(f"t1.status = '{status}'")
-
-            if component:
-                where_conditions.append(f"t1.component = '{component}'")
-
-            # Date filtering - prioritize explicit date ranges over days_back
-            if start_date or end_date:
-                # Use explicit date range filtering
-                if start_date:
-                    # If start_date doesn't have time, assume 00:00:00
-                    if len(start_date) == 10:  # YYYY-MM-DD format
-                        start_date = f"{start_date} 00:00:00"
-                    where_conditions.append(f"t1.{date_field} >= '{start_date}'")
-
-                if end_date:
-                    # If end_date doesn't have time, assume 23:59:59 to capture full day
-                    if len(end_date) == 10:  # YYYY-MM-DD format
-                        end_date = f"{end_date} 23:59:59"
-                    where_conditions.append(f"t1.{date_field} <= '{end_date}'")
-            elif days_back > 0:
-                # Fall back to days_back filtering
-                from datetime import datetime, timedelta
-                start_date_calc = datetime.now() - timedelta(days=days_back)
-                start_date_str = start_date_calc.strftime('%Y-%m-%d %H:%M:%S')
-                where_conditions.append(f"t1.{date_field} >= '{start_date_str}'")
-
-            # Add WHERE clause if we have conditions
-            if where_conditions:
-                base_query += "WHERE " + " AND ".join(where_conditions) + " "
-
-            # Add ordering and limit
-            base_query += f"ORDER BY t1.{date_field} DESC "
-            base_query += f"LIMIT {limit}"
-
-            self.logger.info(f"Getting incidents with filters: status={status}, component={component}, days_back={days_back}, start_date={start_date}, end_date={end_date}, date_field={date_field}, limit={limit}")
 
             result = await self.db_connection.execute_query(base_query, limit)
 
@@ -184,10 +176,10 @@ class IncidentTools(BaseTool):
                         "start_date": start_date if start_date else "all",
                         "end_date": end_date if end_date else "all",
                         "date_field": date_field,
-                        "limit": limit
+                        "limit": limit,
                     },
                     "query": base_query,
-                    "incidents": result["data"]
+                    "incidents": result["data"],
                 }
 
             return result

@@ -4,10 +4,9 @@ Konflux DevLake MCP Server - Database Connection Utility
 """
 
 import json
-import logging
 from datetime import datetime, date
 from decimal import Decimal
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import pymysql
 from pymysql.cursors import DictCursor
@@ -59,11 +58,11 @@ class KonfluxDevLakeConnection:
             self.connection = pymysql.connect(
                 host=self.config['host'],
                 port=self.config['port'],
-                user=self.config['user'],
-                password=self.config['password'],
-                database=self.config.get('database'),
-                charset='utf8mb4',
-                cursorclass=DictCursor
+                user=self.config["user"],
+                password=self.config["password"],
+                database=self.config.get("database"),
+                charset="utf8mb4",
+                cursorclass=DictCursor,
             )
 
             # Test the connection
@@ -77,13 +76,13 @@ class KonfluxDevLakeConnection:
             return {
                 "success": True,
                 "message": "Database connected successfully",
-                "version": result['version'] if result else "Unknown",
+                "version": result["version"] if result else "Unknown",
                 "connection_info": {
-                    "host": self.config['host'],
-                    "port": self.config['port'],
-                    "user": self.config['user'],
-                    "database": self.config.get('database')
-                }
+                    "host": self.config["host"],
+                    "port": self.config["port"],
+                    "user": self.config["user"],
+                    "database": self.config.get("database"),
+                },
             }
         except Exception as e:
             self.logger.error(f"Database connection failed: {e}")
@@ -116,7 +115,7 @@ class KonfluxDevLakeConnection:
                 "success": True,
                 "query": query,
                 "row_count": len(results),
-                "data": serialized_results
+                "data": serialized_results,
             }
         except Exception as e:
             self.logger.error(f"Query execution failed: {e}")

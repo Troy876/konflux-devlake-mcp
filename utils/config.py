@@ -4,33 +4,34 @@ Konflux DevLake MCP Server - Configuration Utility
 """
 
 import os
-from dataclasses import dataclass
-from typing import Optional
 
 
-@dataclass
 class DatabaseConfig:
     """Database configuration"""
-    host: str = "localhost"
-    port: int = 3306
-    user: str = "root"
-    password: str = ""
-    database: str = ""
+
+    def __init__(self, host="localhost", port=3306, user="root", password="", database=""):
+        self.host = host
+        self.port = port
+        self.user = user
+        self.password = password
+        self.database = database
 
 
-@dataclass
 class ServerConfig:
     """Server configuration"""
-    transport: str = "stdio"
-    host: str = "0.0.0.0"
-    port: int = 3000
+
+    def __init__(self, transport="stdio", host="0.0.0.0", port=3000):
+        self.transport = transport
+        self.host = host
+        self.port = port
 
 
-@dataclass
 class LoggingConfig:
     """Logging configuration"""
-    level: str = "INFO"
-    format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+    def __init__(self, level="INFO", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"):
+        self.level = level
+        self.format = format
 
 
 class KonfluxDevLakeConfig:
@@ -66,7 +67,7 @@ class KonfluxDevLakeConfig:
             "port": self.database.port,
             "user": self.database.user,
             "password": self.database.password,
-            "database": self.database.database
+            "database": self.database.database,
         }
 
     def get_server_config(self) -> dict:
@@ -74,7 +75,7 @@ class KonfluxDevLakeConfig:
         return {
             "transport": self.server.transport,
             "host": self.server.host,
-            "port": self.server.port
+            "port": self.server.port,
         }
 
     def validate(self) -> bool:

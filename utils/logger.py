@@ -7,7 +7,6 @@ import logging
 import logging.handlers
 import os
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -64,8 +63,7 @@ def _setup_logging() -> logging.Logger:
 
     # Create formatter
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
     )
 
     # Create filter for MCP library errors
@@ -100,8 +98,8 @@ def _setup_logging() -> logging.Logger:
     # File handler for general logs with filter
     file_handler = logging.handlers.RotatingFileHandler(
         logs_dir / "konflux_devlake_mcp_server.log",
-        maxBytes=10*1024*1024,  # 10MB
-        backupCount=5
+        maxBytes=10 * 1024 * 1024,  # 10MB
+        backupCount=5,
     )
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
@@ -111,8 +109,8 @@ def _setup_logging() -> logging.Logger:
     # Error file handler with filter (but still log other errors)
     error_handler = logging.handlers.RotatingFileHandler(
         logs_dir / "konflux_devlake_mcp_server_error.log",
-        maxBytes=10*1024*1024,  # 10MB
-        backupCount=5
+        maxBytes=10 * 1024 * 1024,  # 10MB
+        backupCount=5,
     )
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(formatter)
@@ -138,8 +136,14 @@ def log_system_info():
 
     # Log environment variables (without sensitive data)
     env_vars = [
-        "DB_HOST", "DB_PORT", "DB_USER", "DB_DATABASE",
-        "TRANSPORT", "SERVER_HOST", "SERVER_PORT", "LOG_LEVEL"
+        "DB_HOST",
+        "DB_PORT",
+        "DB_USER",
+        "DB_DATABASE",
+        "TRANSPORT",
+        "SERVER_HOST",
+        "SERVER_PORT",
+        "LOG_LEVEL",
     ]
 
     logger.info("=== Environment Variables ===")
@@ -165,6 +169,7 @@ def setup_module_logging(module_name: str, log_level: str = "INFO"):
 
 def log_function_call(func_name: str, args: dict = None, kwargs: dict = None):
     """Decorator to log function calls"""
+
     def decorator(func):
         def wrapper(*args, **kwargs):
             logger = get_logger(f"{func.__module__}.{func.__name__}")
@@ -176,11 +181,15 @@ def log_function_call(func_name: str, args: dict = None, kwargs: dict = None):
             except Exception as e:
                 logger.error(f"{func_name} failed with error: {e}")
                 raise
+
         return wrapper
+
     return decorator
 
 
-def log_database_operation(operation: str, query: str = None, success: bool = True, error: str = None):
+def log_database_operation(
+    operation: str, query: str = None, success: bool = True, error: str = None
+):
     """Log database operations"""
     logger = get_logger("database_operations")
 

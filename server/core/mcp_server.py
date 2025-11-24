@@ -17,7 +17,6 @@ from mcp.types import Tool, TextContent
 from server.handlers.tool_handler import ToolHandler
 from server.transport.base_transport import BaseTransport
 from utils.logger import get_logger
-from utils.db import DateTimeEncoder
 
 
 class KonfluxDevLakeMCPServer:
