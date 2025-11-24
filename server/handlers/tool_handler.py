@@ -14,6 +14,8 @@ from mcp.types import TextContent
 from utils.logger import get_logger
 from utils.db import DateTimeEncoder
 from utils.security import SQLInjectionDetector, DataMasking
+
+
 class ToolHandler:
     """
     Handles tool execution requests with security validation and data masking.
@@ -150,7 +152,9 @@ class ToolHandler:
 
         return result
 
-    def _create_error_response(self, error_message: str, tool_name: str = None, arguments: Dict = None) -> List[TextContent]:
+    def _create_error_response(
+        self, error_message: str, tool_name: str = None, arguments: Dict = None
+    ) -> List[TextContent]:
         """
         Create a standardized error response.
 
@@ -162,10 +166,7 @@ class ToolHandler:
         Returns:
             List containing error response as TextContent
         """
-        error_result = {
-            "success": False,
-            "error": error_message
-        }
+        error_result = {"success": False, "error": error_message}
 
         if tool_name:
             error_result["tool_name"] = tool_name
@@ -173,4 +174,6 @@ class ToolHandler:
         if arguments:
             error_result["arguments"] = arguments
 
-        return [TextContent(type="text", text=json.dumps(error_result, indent=2, cls=DateTimeEncoder))]
+        return [
+            TextContent(type="text", text=json.dumps(error_result, indent=2, cls=DateTimeEncoder))
+        ]

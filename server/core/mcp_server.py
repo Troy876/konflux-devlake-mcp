@@ -7,9 +7,7 @@ tool management, and security validation.
 """
 
 import asyncio
-import json
-import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from mcp.server import Server
 from mcp.types import Tool, TextContent
@@ -103,5 +101,5 @@ class KonfluxDevLakeMCPServer:
             "server_name": "konflux-devlake-mcp-server",
             "version": "1.0.0",
             "status": "running",
-            "security_stats": self.security_manager.get_security_stats()
+            "security_stats": self.security_manager.get_security_stats(),
         }

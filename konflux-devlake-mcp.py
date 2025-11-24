@@ -194,7 +194,12 @@ async def run_server(config: KonfluxDevLakeConfig) -> int:
 
         server = server_factory.create_server(config)
         transport_kwargs = (
-            {"host": config.server.host, "port": config.server.port}
+            {
+                "host": config.server.host,
+                "port": config.server.port,
+                "timeout_keep_alive": config.server.timeout_keep_alive,
+                "timeout_graceful_shutdown": config.server.timeout_graceful_shutdown,
+            }
             if config.server.transport == "http"
             else {}
         )
@@ -213,9 +218,9 @@ async def run_server(config: KonfluxDevLakeConfig) -> int:
     finally:
         logger.info("Shutting down server")
         try:
-            if 'server' in locals() and server:
+            if "server" in locals() and server:
                 await server.shutdown()
-            if 'transport' in locals() and transport:
+            if "transport" in locals() and transport:
                 await transport.stop()
             shutdown_logging()
             logger.info("Server shutdown complete")

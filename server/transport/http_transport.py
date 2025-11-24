@@ -7,12 +7,9 @@ This module provides the HTTP transport layer for remote MCP server communicatio
 
 import asyncio
 import json
-from datetime import datetime
 from typing import Dict, Any
 
 from mcp.server import Server
-
-from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from anyio import ClosedResourceError
 
 from server.transport.base_transport import BaseTransport
@@ -27,16 +24,26 @@ class HttpTransport(BaseTransport):
     production deployments and remote client connections.
     """
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 3000):
+    def __init__(
+        self,
+        host: str = "0.0.0.0",
+        port: int = 3000,
+        timeout_keep_alive: int = 600,
+        timeout_graceful_shutdown: int = 120,
+    ):
         """
         Initialize the HTTP transport.
 
         Args:
             host: Host address to bind to
             port: Port number to listen on
+            timeout_keep_alive: Keep-alive timeout in seconds (default: 600 for LLM connections)
+            timeout_graceful_shutdown: Graceful shutdown timeout in seconds (default: 120)
         """
         self.host = host
         self.port = port
+        self.timeout_keep_alive = timeout_keep_alive
+        self.timeout_graceful_shutdown = timeout_graceful_shutdown
         self.logger = get_logger(f"{__name__}.HttpTransport")
         self._session_manager = None
         self._server = None
@@ -48,14 +55,12 @@ class HttpTransport(BaseTransport):
         Args:
             server: MCP server instance to handle requests
         """
-        self.logger.info(f"Starting Konflux DevLake MCP Server (HTTP mode) - {self.host}:{self.port}")
+        self.logger.info(
+            f"Starting Konflux DevLake MCP Server (HTTP mode) - {self.host}:{self.port}"
+        )
 
         try:
             import uvicorn
-            from starlette.applications import Starlette
-            from starlette.requests import Request
-            from starlette.responses import JSONResponse
-            from starlette.routing import Route
 
             # Create session manager with improved configuration
             # Wrap the session manager to handle ClosedResourceError gracefully
@@ -67,15 +72,18 @@ class HttpTransport(BaseTransport):
             # Create ASGI app with MCP request handling and error handling
             mcp_app = self._create_mcp_app(app)
 
-            # Start server with improved configuration
+            # Start server with improved configuration for LLM connections
+            # Increased timeouts to handle long-running LLM requests and database queries
             config = uvicorn.Config(
                 app=mcp_app,
                 host=self.host,
                 port=self.port,
                 log_level="info",
                 access_log=True,
-                timeout_keep_alive=30,  # Keep-alive timeout
-                timeout_graceful_shutdown=30,  # Graceful shutdown timeout
+                timeout_keep_alive=self.timeout_keep_alive,
+                timeout_graceful_shutdown=self.timeout_graceful_shutdown,
+                limit_concurrency=None,  # No concurrency limit
+                limit_max_requests=None,  # No request limit
             )
             self._server = uvicorn.Server(config)
 
@@ -110,23 +118,30 @@ class HttpTransport(BaseTransport):
         # This must be done early to prevent the library from logging the error
         class MCPErrorFilter(logging.Filter):
             """Filter to suppress ClosedResourceError from MCP library"""
+
             def filter(self, record):
                 message = record.getMessage()
-                if any(keyword in message for keyword in [
-                    'ClosedResourceError', 'closed resource', 'Error in message router',
-                    'receive_nowait', 'anyio.ClosedResourceError'
-                ]):
+                if any(
+                    keyword in message
+                    for keyword in [
+                        "ClosedResourceError",
+                        "closed resource",
+                        "Error in message router",
+                        "receive_nowait",
+                        "anyio.ClosedResourceError",
+                    ]
+                ):
                     return False
-                if hasattr(record, 'exc_info') and record.exc_info:
+                if hasattr(record, "exc_info") and record.exc_info:
                     exc_type = str(record.exc_info[0])
-                    if 'ClosedResourceError' in exc_type:
+                    if "ClosedResourceError" in exc_type:
                         return False
                 return True
 
         mcp_loggers = [
-            'mcp.server.streamable_http',
-            'mcp.server.streamable_http_manager',
-            'mcp.server'
+            "mcp.server.streamable_http",
+            "mcp.server.streamable_http_manager",
+            "mcp.server",
         ]
         error_filter = MCPErrorFilter()
         for logger_name in mcp_loggers:
@@ -138,9 +153,7 @@ class HttpTransport(BaseTransport):
 
         # Create the session manager
         session_manager = StreamableHTTPSessionManager(
-            app=server,
-            json_response=True,
-            stateless=True
+            app=server, json_response=True, stateless=True
         )
 
         # Wrap handle_request to catch and suppress ClosedResourceError
@@ -161,26 +174,25 @@ class HttpTransport(BaseTransport):
         session_manager.handle_request = wrapped_handle_request
         return session_manager
 
-
     def _create_mcp_app(self, app):
         """Create ASGI app that handles MCP requests with improved error handling."""
         from starlette.responses import Response
         from anyio import ClosedResourceError
-        
+
         async def mcp_app(scope, receive, send):
             try:
                 if scope["type"] == "http":
                     path = scope.get("path", "")
-                    
+
                     if path.startswith("/health") or path.startswith("/security"):
                         await app(scope, receive, send)
                         return
-                    
+
                     if path == "/mcp" or path.startswith("/mcp/"):
                         try:
                             self.logger.debug(f"Handling MCP request: {path}")
                             await self._session_manager.handle_request(scope, receive, send)
-                        except ClosedResourceError as e:
+                        except ClosedResourceError:
                             # Client disconnected - this is normal, just log at debug level
                             self.logger.debug(f"Client disconnected during MCP request: {path}")
                             # Don't send response as connection is already closed
@@ -190,16 +202,20 @@ class HttpTransport(BaseTransport):
                             # Only send error response if connection is still open
                             try:
                                 response = Response(
-                                    json.dumps({"error": "Internal server error", "details": str(e)}),
+                                    json.dumps(
+                                        {"error": "Internal server error", "details": str(e)}
+                                    ),
                                     status_code=500,
-                                    media_type="application/json"
+                                    media_type="application/json",
                                 )
                                 await response(scope, receive, send)
                             except (ClosedResourceError, BrokenPipeError, ConnectionResetError):
                                 # Connection already closed, can't send response
-                                self.logger.debug("Connection closed before error response could be sent")
+                                self.logger.debug(
+                                    "Connection closed before error response could be sent"
+                                )
                         return
-                    
+
                     # 404 for other paths
                     response = Response("Not Found", status_code=404)
                     await response(scope, receive, send)
@@ -215,13 +231,13 @@ class HttpTransport(BaseTransport):
                     response = Response(
                         json.dumps({"error": "Internal server error", "details": str(e)}),
                         status_code=500,
-                        media_type="application/json"
+                        media_type="application/json",
                     )
                     await response(scope, receive, send)
                 except (ClosedResourceError, BrokenPipeError, ConnectionResetError):
                     # Connection already closed, can't send response
                     self.logger.debug("Connection closed before error response could be sent")
-        
+
         return mcp_app
 
     async def stop(self) -> None:
@@ -256,5 +272,5 @@ class HttpTransport(BaseTransport):
             "host": self.host,
             "port": self.port,
             "description": "HTTP/HTTPS transport for remote communication",
-            "capabilities": ["remote_access", "production_deployment"]
+            "capabilities": ["remote_access", "production_deployment"],
         }

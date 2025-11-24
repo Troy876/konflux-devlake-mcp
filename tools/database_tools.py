@@ -44,25 +44,35 @@ class DatabaseTools(BaseTool):
         return [
             Tool(
                 name="connect_database",
-                description="**Database Connection Tool** - Establishes and verifies connection to the Konflux DevLake database. Use this tool to test connectivity before running other database operations. Returns connection status and database information. This is typically the first tool you should call to ensure the database is accessible.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {},
-                    "required": []
-                }
+                description=(
+                    "**Database Connection Tool** - Establishes and verifies connection "
+                    "to the Konflux DevLake database. Use this tool to test connectivity "
+                    "before running other database operations. Returns connection status and "
+                    "database information. This is typically the first tool you should call "
+                    "to ensure the database is accessible."
+                ),
+                inputSchema={"type": "object", "properties": {}, "required": []},
             ),
             Tool(
                 name="list_databases",
-                description="**Database Discovery Tool** - Lists all available databases in the Konflux DevLake system. This tool shows you what data sources are available, including the main 'lake' database containing incidents, deployments, and other Konflux operational data. Use this to explore what data is available before diving into specific tables.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {},
-                    "required": []
-                }
+                description=(
+                    "**Database Discovery Tool** - Lists all available databases in the "
+                    "Konflux DevLake system. This tool shows you what data sources are "
+                    "available, including the main 'lake' database containing incidents, "
+                    "deployments, and other Konflux operational data. Use this to explore "
+                    "what data is available before diving into specific tables."
+                ),
+                inputSchema={"type": "object", "properties": {}, "required": []},
             ),
             Tool(
                 name="list_tables",
-                description="**Table Explorer Tool** - Lists all tables within a specific database. This tool helps you discover what data is available in each database. For the 'lake' database, you'll find tables like 'incidents', 'cicd_deployments', 'cicd_deployment_commits', and 'project_mapping'. Use this to understand the data structure before querying specific tables.",
+                description=(
+                    "**Table Explorer Tool** - Lists all tables within a specific database. "
+                    "This tool helps you discover what data is available in each database. "
+                    "For the 'lake' database, you'll find tables like 'incidents', "
+                    "'cicd_deployments', 'cicd_deployment_commits', and 'project_mapping'. "
+                    "Use this to understand the data structure before querying specific tables."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -81,7 +91,14 @@ class DatabaseTools(BaseTool):
             ),
             Tool(
                 name="get_table_schema",
-                description="**Schema Inspector Tool** - Provides detailed schema information for a specific table, including column names, data types, constraints, and descriptions. This tool is essential for understanding the structure of tables before writing queries. For example, the 'incidents' table contains fields like 'incident_key', 'title', 'status', 'created_date', and 'lead_time_minutes'.",
+                description=(
+                    "**Schema Inspector Tool** - Provides detailed schema information for "
+                    "a specific table, including column names, data types, constraints, and "
+                    "descriptions. This tool is essential for understanding the structure of "
+                    "tables before writing queries. For example, the 'incidents' table "
+                    "contains fields like 'incident_key', 'title', 'status', 'created_date', "
+                    "and 'lead_time_minutes'."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -107,12 +124,34 @@ class DatabaseTools(BaseTool):
             ),
             Tool(
                 name="execute_query",
-                description="**ADVANCED SQL Query Tool** - Executes custom SQL queries against the Konflux DevLake database. **WARNING: This tool allows arbitrary SQL execution and should be used with extreme caution.** Only use this tool when other specialized tools cannot meet your needs. This tool supports SELECT queries with filtering, aggregation, joins, and advanced SQL features. Use this for custom analysis, reporting, and data exploration. Example queries: 'SELECT * FROM lake.incidents WHERE status = \"DONE\"', 'SELECT COUNT(*) FROM lake.cicd_deployments WHERE environment = \"PRODUCTION\"'. **SECURITY NOTE: Always validate and sanitize your queries before execution.**",
+                description=(
+                    "**ADVANCED SQL Query Tool** - Executes custom SQL queries against the "
+                    "Konflux DevLake database. **WARNING: This tool allows arbitrary SQL "
+                    "execution and should be used with extreme caution.** Only use this tool "
+                    "when other specialized tools cannot meet your needs. This tool supports "
+                    "SELECT queries with filtering, aggregation, joins, and advanced SQL "
+                    "features. Use this for custom analysis, reporting, and data exploration. "
+                    "Example queries: 'SELECT * FROM lake.incidents WHERE status = \"DONE\"', "
+                    "'SELECT COUNT(*) FROM lake.cicd_deployments WHERE environment = "
+                    '"PRODUCTION"\'. **SECURITY NOTE: Always validate and sanitize your '
+                    "queries before execution.**"
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "query": {"type": "string", "description": "SQL query to execute (e.g., 'SELECT * FROM lake.incidents LIMIT 10'). WARNING: Only use SELECT queries for safety."},
-                        "limit": {"type": "integer", "description": "Maximum number of rows to return (default: 100, max: 1000)"}
+                        "query": {
+                            "type": "string",
+                            "description": (
+                                "SQL query to execute (e.g., 'SELECT * FROM lake.incidents "
+                                "LIMIT 10'). WARNING: Only use SELECT queries for safety."
+                            ),
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": (
+                                "Maximum number of rows to return (default: 100, max: 1000)"
+                            ),
+                        },
                     },
                     "required": ["query"],
                 },
@@ -146,10 +185,7 @@ class DatabaseTools(BaseTool):
             elif name == "execute_query":
                 result = await self._execute_query_tool(arguments)
             else:
-                result = {
-                    "success": False,
-                    "error": f"Unknown database tool: {name}"
-                }
+                result = {"success": False, "error": f"Unknown database tool: {name}"}
 
             return json.dumps(result, indent=2, cls=DateTimeEncoder)
 

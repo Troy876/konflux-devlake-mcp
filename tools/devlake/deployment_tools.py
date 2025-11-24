@@ -44,7 +44,18 @@ class DeploymentTools(BaseTool):
         return [
             Tool(
                 name="get_deployments",
-                description="**Comprehensive Deployment Analytics Tool** - Retrieves deployment data from the Konflux DevLake database with advanced filtering capabilities. This tool provides comprehensive deployment information including deployment_id, display_title, url, result, environment, finished_date, and project details. Supports filtering by project (e.g., 'Konflux_Pilot_Team'), environment (e.g., 'PRODUCTION', 'STAGING', 'DEVELOPMENT'), time range (days_back, start_date, end_date), and result limits. Perfect for deployment frequency analysis, release tracking, and operational reporting. Returns deployments sorted by finished_date (newest first).",
+                description=(
+                    "**Comprehensive Deployment Analytics Tool** - Retrieves deployment data "
+                    "from the Konflux DevLake database with advanced filtering capabilities. "
+                    "This tool provides comprehensive deployment information including "
+                    "deployment_id, display_title, url, result, environment, finished_date, "
+                    "and project details. Supports filtering by project (e.g., "
+                    "'Konflux_Pilot_Team'), environment (e.g., 'PRODUCTION', 'STAGING', "
+                    "'DEVELOPMENT'), time range (days_back, start_date, end_date), and result "
+                    "limits. Perfect for deployment frequency analysis, release tracking, "
+                    "and operational reporting. Returns deployments sorted by finished_date "
+                    "(newest first)."
+                ),
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -116,10 +127,7 @@ class DeploymentTools(BaseTool):
             if name == "get_deployments":
                 result = await self._get_deployments_tool(arguments)
             else:
-                result = {
-                    "success": False,
-                    "error": f"Unknown deployment tool: {name}"
-                }
+                result = {"success": False, "error": f"Unknown deployment tool: {name}"}
 
             return json.dumps(result, indent=2, cls=DateTimeEncoder)
 
@@ -252,7 +260,12 @@ class DeploymentTools(BaseTool):
             # Add limit
             base_query += f" LIMIT {limit}"
 
-            self.logger.info(f"Getting deployments with filters: project={project}, environment={environment}, days_back={days_back}, start_date={start_date}, end_date={end_date}, date_field={date_field}, limit={limit}")
+            self.logger.info(
+                f"Getting deployments with filters: project={project}, "
+                f"environment={environment}, days_back={days_back}, "
+                f"start_date={start_date}, end_date={end_date}, "
+                f"date_field={date_field}, limit={limit}"
+            )
 
             result = await self.db_connection.execute_query(base_query, limit)
 

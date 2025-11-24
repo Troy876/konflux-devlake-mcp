@@ -42,7 +42,7 @@ class KonfluxDevLakeToolsManager:
             DatabaseTools(db_connection),
             IncidentTools(db_connection),
             DeploymentTools(db_connection),
-            PRRetestTools(db_connection)
+            PRRetestTools(db_connection),
         ]
 
         # Create tool name to module mapping for efficient routing

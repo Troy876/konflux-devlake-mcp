@@ -67,5 +67,5 @@ class StdioTransport(BaseTransport):
         return {
             "type": "stdio",
             "description": "Standard input/output transport for local communication",
-            "capabilities": ["local_development", "testing"]
+            "capabilities": ["local_development", "testing"],
         }

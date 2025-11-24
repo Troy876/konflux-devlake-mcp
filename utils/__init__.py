@@ -18,5 +18,5 @@ __all__ = [
     "LoggerMixin",
     "KonfluxDevLakeSecurityManager",
     "SQLInjectionDetector",
-    "DataMasking"
+    "DataMasking",
 ]

@@ -70,7 +70,7 @@ class KonfluxDevLakeSecurityManager:
             for pattern in dangerous_patterns:
                 if re.search(pattern, query_lower, re.IGNORECASE):
                     self.logger.warning(f"Potentially dangerous SQL pattern detected: {pattern}")
-                    return False, f"Dangerous SQL pattern detected"
+                    return False, "Dangerous SQL pattern detected"
 
             # Check for balanced parentheses
             if query_lower.count("(") != query_lower.count(")"):
@@ -98,10 +98,10 @@ class KonfluxDevLakeSecurityManager:
         sanitized = input_str
 
         for char in dangerous_chars:
-            sanitized = sanitized.replace(char, '')
+            sanitized = sanitized.replace(char, "")
 
         # Remove multiple spaces
-        sanitized = ' '.join(sanitized.split())
+        sanitized = " ".join(sanitized.split())
 
         return sanitized
 
@@ -155,11 +155,7 @@ class KonfluxDevLakeSecurityManager:
         key = secrets.token_urlsafe(32)
 
         # Store the key
-        self.api_keys[user_id] = {
-            'key': key,
-            'created': datetime.now(),
-            'last_used': None
-        }
+        self.api_keys[user_id] = {"key": key, "created": datetime.now(), "last_used": None}
 
         self.logger.info(f"Generated API key for user: {user_id}")
         return key
@@ -361,18 +357,10 @@ class DataMasking:
         )
 
         # Mask phone numbers
-        masked_data = re.sub(
-            self.sensitive_patterns['phone'],
-            '***-***-****',
-            masked_data
-        )
+        masked_data = re.sub(self.sensitive_patterns["phone"], "***-***-****", masked_data)
 
         # Mask SSN
-        masked_data = re.sub(
-            self.sensitive_patterns['ssn'],
-            '***-**-****',
-            masked_data
-        )
+        masked_data = re.sub(self.sensitive_patterns["ssn"], "***-**-****", masked_data)
 
         # Mask credit card numbers
         masked_data = re.sub(
@@ -380,11 +368,7 @@ class DataMasking:
         )
 
         # Mask IP addresses
-        masked_data = re.sub(
-            self.sensitive_patterns['ip_address'],
-            '***.***.***.***',
-            masked_data
-        )
+        masked_data = re.sub(self.sensitive_patterns["ip_address"], "***.***.***.***", masked_data)
 
         return masked_data
 

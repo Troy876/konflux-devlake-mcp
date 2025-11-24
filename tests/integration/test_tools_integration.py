@@ -7,6 +7,7 @@ against a real database with actual data.
 
 import pytest
 import json
+from toon_format import decode as toon_decode
 
 from tools.devlake.incident_tools import IncidentTools
 from tools.devlake.deployment_tools import DeploymentTools
@@ -22,7 +23,7 @@ class TestIncidentToolsIntegration:
         incident_tools = IncidentTools(integration_db_connection)
 
         result_json = await incident_tools.call_tool("get_incidents", {})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         assert "incidents" in result
@@ -44,7 +45,7 @@ class TestIncidentToolsIntegration:
         incident_tools = IncidentTools(integration_db_connection)
 
         result_json = await incident_tools.call_tool("get_incidents", {"status": "DONE"})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         assert result["filters"]["status"] == "DONE"
@@ -60,7 +61,7 @@ class TestIncidentToolsIntegration:
         incident_tools = IncidentTools(integration_db_connection)
 
         result_json = await incident_tools.call_tool("get_incidents", {"component": "api-service"})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         assert result["filters"]["component"] == "api-service"
@@ -76,7 +77,7 @@ class TestIncidentToolsIntegration:
         result_json = await incident_tools.call_tool(
             "get_incidents", {"start_date": "2024-01-15", "end_date": "2024-01-16"}
         )
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         assert "2024-01-15" in result["filters"]["start_date"]
@@ -117,7 +118,7 @@ class TestIncidentToolsIntegration:
 
         incident_tools = IncidentTools(integration_db_connection)
         result_json = await incident_tools.call_tool("get_incidents", {"component": "test-service"})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         incidents = result["incidents"]

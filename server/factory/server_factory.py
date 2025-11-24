@@ -83,7 +83,14 @@ class ServerFactory:
         elif transport_type == "http":
             host = kwargs.get("host", "0.0.0.0")
             port = kwargs.get("port", 3000)
-            return HttpTransport(host=host, port=port)
+            timeout_keep_alive = kwargs.get("timeout_keep_alive", 300)
+            timeout_graceful_shutdown = kwargs.get("timeout_graceful_shutdown", 60)
+            return HttpTransport(
+                host=host,
+                port=port,
+                timeout_keep_alive=timeout_keep_alive,
+                timeout_graceful_shutdown=timeout_graceful_shutdown,
+            )
         else:
             raise ValueError(f"Unsupported transport type: {transport_type}")
 
@@ -134,5 +141,5 @@ class ServerFactory:
             "database_host": config.database.host,
             "database_port": config.database.port,
             "database_name": config.database.database,
-            "log_level": config.logging.level
+            "log_level": config.logging.level,
         }

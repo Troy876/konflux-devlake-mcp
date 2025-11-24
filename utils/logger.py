@@ -35,21 +35,24 @@ class ClosedResourceErrorFilter(logging.Filter):
         message = record.getMessage()
 
         # Check if this is from MCP server streamable_http
-        if 'mcp.server' in record.name or 'streamable_http' in record.name:
+        if "mcp.server" in record.name or "streamable_http" in record.name:
             # Suppress ClosedResourceError and related connection errors
-            if any(keyword in message for keyword in [
-                'ClosedResourceError',
-                'closed resource',
-                'Error in message router',
-                'receive_nowait',
-                'anyio.ClosedResourceError'
-            ]):
+            if any(
+                keyword in message
+                for keyword in [
+                    "ClosedResourceError",
+                    "closed resource",
+                    "Error in message router",
+                    "receive_nowait",
+                    "anyio.ClosedResourceError",
+                ]
+            ):
                 return False
 
         # Also check the exception type if available
-        if hasattr(record, 'exc_info') and record.exc_info:
+        if hasattr(record, "exc_info") and record.exc_info:
             exc_type = record.exc_info[0]
-            if exc_type and 'ClosedResourceError' in str(exc_type):
+            if exc_type and "ClosedResourceError" in str(exc_type):
                 return False
 
         return True
@@ -75,11 +78,7 @@ def _setup_logging() -> logging.Logger:
     root_logger.addFilter(closed_resource_filter)
 
     # Also filter MCP library loggers specifically
-    mcp_loggers = [
-        'mcp.server',
-        'mcp.server.streamable_http',
-        'mcp.server.streamable_http_manager'
-    ]
+    mcp_loggers = ["mcp.server", "mcp.server.streamable_http", "mcp.server.streamable_http_manager"]
     for logger_name in mcp_loggers:
         mcp_logger = logging.getLogger(logger_name)
         mcp_logger.addFilter(closed_resource_filter)

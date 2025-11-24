@@ -53,16 +53,26 @@ class KonfluxDevLakeConnection:
     async def connect(self) -> Dict[str, Any]:
         """Connect to the database"""
         try:
-            self.logger.info(f"Connecting to database at {self.config['host']}:{self.config['port']}")
+            self.logger.info(
+                f"Connecting to database at {self.config['host']}:{self.config['port']}"
+            )
+
+            # Database connection with timeout settings for long-running queries
+            connect_timeout = self.config.get("connect_timeout", 30)
+            read_timeout = self.config.get("read_timeout", 300)  # 5 minutes for long queries
+            write_timeout = self.config.get("write_timeout", 60)
 
             self.connection = pymysql.connect(
-                host=self.config['host'],
-                port=self.config['port'],
+                host=self.config["host"],
+                port=self.config["port"],
                 user=self.config["user"],
                 password=self.config["password"],
                 database=self.config.get("database"),
                 charset="utf8mb4",
                 cursorclass=DictCursor,
+                connect_timeout=connect_timeout,
+                read_timeout=read_timeout,
+                write_timeout=write_timeout,
             )
 
             # Test the connection
@@ -87,10 +97,7 @@ class KonfluxDevLakeConnection:
         except Exception as e:
             self.logger.error(f"Database connection failed: {e}")
             log_database_operation("connect", success=False, error=str(e))
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     async def execute_query(self, query: str, limit: int = 100) -> Dict[str, Any]:
         """Execute a SQL query"""
@@ -120,11 +127,7 @@ class KonfluxDevLakeConnection:
         except Exception as e:
             self.logger.error(f"Query execution failed: {e}")
             log_database_operation("execute_query", query=query, success=False, error=str(e))
-            return {
-                "success": False,
-                "error": str(e),
-                "query": query
-            }
+            return {"success": False, "error": str(e), "query": query}
 
     async def close(self):
         """Close database connection"""
@@ -153,9 +156,9 @@ class KonfluxDevLakeConnection:
     def get_connection_info(self) -> Dict[str, Any]:
         """Get connection information"""
         return {
-            "host": self.config['host'],
-            "port": self.config['port'],
-            "user": self.config['user'],
-            "database": self.config.get('database'),
-            "connected": self.connection is not None
+            "host": self.config["host"],
+            "port": self.config["port"],
+            "user": self.config["user"],
+            "database": self.config.get("database"),
+            "connected": self.connection is not None,
         }
