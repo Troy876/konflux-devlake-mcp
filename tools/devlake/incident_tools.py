@@ -49,12 +49,12 @@ class IncidentTools(BaseTool):
                     "from the Konflux DevLake database with advanced filtering capabilities. "
                     "This tool automatically deduplicates incidents by incident_key to show "
                     "only the most recent version of each incident. Supports filtering by "
-                    "status (e.g., 'DONE', 'IN_PROGRESS', 'OPEN'), component name, and "
-                    "flexible date ranges. Provides comprehensive incident data including "
-                    "incident_key, title, description, status, created_date, "
-                    "resolution_date, lead_time_minutes, component, and URL. Perfect for "
-                    "incident analysis, reporting, and understanding operational issues. "
-                    "Returns incidents sorted by creation date (newest first)."
+                    "status (e.g., 'DONE', 'IN_PROGRESS', 'OPEN'), component name, and flexible "
+                    "date ranges. Provides comprehensive incident data including incident_key, "
+                    "title, description, status, created_date, resolution_date, "
+                    "lead_time_minutes, component, and URL. Perfect for incident analysis, "
+                    "reporting, and understanding operational issues. Returns incidents sorted "
+                    "by creation date (newest first)."
                 ),
                 inputSchema={
                     "type": "object",

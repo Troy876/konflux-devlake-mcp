@@ -1,0 +1,37 @@
+---
+codecov:
+  token:  # Set via CODECOV_TOKEN secret in GitHub Actions
+  require_ci_to_pass: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 1%
+        base: auto
+        branches:
+          - main
+    patch:
+      default:
+        target: 70%
+        threshold: 1%
+
+ignore:
+  - "tests/"
+  - "venv/"
+  - "__pycache__/"
+  - "*.pyc"
+  - ".github/"
+  - "docs/"
+  - "k8s/"
+  - "testdata/"
+
+comment:
+  layout: "reach,diff,flags,tree,reach"
+  behavior: default
+  require_changes: false
