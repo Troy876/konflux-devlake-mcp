@@ -9,21 +9,43 @@ import os
 class DatabaseConfig:
     """Database configuration"""
 
-    def __init__(self, host="localhost", port=3306, user="root", password="", database=""):
+    def __init__(
+        self,
+        host="localhost",
+        port=3306,
+        user="root",
+        password="",
+        database="",
+        connect_timeout=60,
+        read_timeout=600,
+        write_timeout=120,
+    ):
         self.host = host
         self.port = port
         self.user = user
         self.password = password
         self.database = database
+        self.connect_timeout = connect_timeout
+        self.read_timeout = read_timeout
+        self.write_timeout = write_timeout
 
 
 class ServerConfig:
     """Server configuration"""
 
-    def __init__(self, transport="stdio", host="0.0.0.0", port=3000):
+    def __init__(
+        self,
+        transport="stdio",
+        host="0.0.0.0",
+        port=3000,
+        timeout_keep_alive=600,
+        timeout_graceful_shutdown=120,
+    ):
         self.transport = transport
         self.host = host
         self.port = port
+        self.timeout_keep_alive = timeout_keep_alive
+        self.timeout_graceful_shutdown = timeout_graceful_shutdown
 
 
 class LoggingConfig:
@@ -51,11 +73,28 @@ class KonfluxDevLakeConfig:
         self.database.user = os.getenv("DB_USER", self.database.user)
         self.database.password = os.getenv("DB_PASSWORD", self.database.password)
         self.database.database = os.getenv("DB_DATABASE", self.database.database)
+        self.database.connect_timeout = int(
+            os.getenv("DB_CONNECT_TIMEOUT", str(self.database.connect_timeout))
+        )
+        self.database.read_timeout = int(
+            os.getenv("DB_READ_TIMEOUT", str(self.database.read_timeout))
+        )
+        self.database.write_timeout = int(
+            os.getenv("DB_WRITE_TIMEOUT", str(self.database.write_timeout))
+        )
 
         # Server configuration
         self.server.transport = os.getenv("TRANSPORT", self.server.transport)
         self.server.host = os.getenv("SERVER_HOST", self.server.host)
         self.server.port = int(os.getenv("SERVER_PORT", str(self.server.port)))
+        self.server.timeout_keep_alive = int(
+            os.getenv("SERVER_TIMEOUT_KEEP_ALIVE", str(self.server.timeout_keep_alive))
+        )
+        self.server.timeout_graceful_shutdown = int(
+            os.getenv(
+                "SERVER_TIMEOUT_GRACEFUL_SHUTDOWN", str(self.server.timeout_graceful_shutdown)
+            )
+        )
 
         # Logging configuration
         self.logging.level = os.getenv("LOG_LEVEL", self.logging.level)
@@ -68,6 +107,9 @@ class KonfluxDevLakeConfig:
             "user": self.database.user,
             "password": self.database.password,
             "database": self.database.database,
+            "connect_timeout": self.database.connect_timeout,
+            "read_timeout": self.database.read_timeout,
+            "write_timeout": self.database.write_timeout,
         }
 
     def get_server_config(self) -> dict:

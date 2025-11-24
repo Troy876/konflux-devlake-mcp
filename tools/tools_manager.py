@@ -15,6 +15,7 @@ from tools.base.base_tool import BaseTool
 from tools.database_tools import DatabaseTools
 from tools.devlake.incident_tools import IncidentTools
 from tools.devlake.deployment_tools import DeploymentTools
+from tools.devlake.pr_retest_tools import PRRetestTools
 from utils.logger import get_logger, log_tool_call
 
 
@@ -41,6 +42,7 @@ class KonfluxDevLakeToolsManager:
             DatabaseTools(db_connection),
             IncidentTools(db_connection),
             DeploymentTools(db_connection),
+            PRRetestTools(db_connection),
         ]
 
         # Create tool name to module mapping for efficient routing

@@ -8,6 +8,7 @@ and edge cases correctly with a real database.
 import pytest
 import json
 import asyncio
+from toon_format import decode as toon_decode
 
 from tools.devlake.incident_tools import IncidentTools
 from tools.devlake.deployment_tools import DeploymentTools
@@ -32,7 +33,7 @@ class TestConcurrentOperations:
 
         assert len(results) == 5
         for result_json in results:
-            result = json.loads(result_json)
+            result = toon_decode(result_json)
             assert result["success"] is True
             assert "incidents" in result
 
@@ -71,9 +72,19 @@ class TestConcurrentOperations:
         results = await asyncio.gather(*tasks)
 
         assert len(results) == 5
-        for result_json in results:
-            result = json.loads(result_json)
-            assert result["success"] is True
+        # Results are: incident, deployment, database, incident, deployment
+        # Use appropriate decoder for each
+        result1 = toon_decode(results[0])  # incident
+        result2 = json.loads(results[1])  # deployment
+        result3 = json.loads(results[2])  # database
+        result4 = toon_decode(results[3])  # incident
+        result5 = json.loads(results[4])  # deployment
+
+        assert result1["success"] is True
+        assert result2["success"] is True
+        assert result3["success"] is True
+        assert result4["success"] is True
+        assert result5["success"] is True
 
     async def test_rapid_sequential_queries(
         self, integration_db_connection: KonfluxDevLakeConnection, clean_database
@@ -88,7 +99,7 @@ class TestConcurrentOperations:
 
         assert len(results) == 10
         for result_json in results:
-            result = json.loads(result_json)
+            result = toon_decode(result_json)
             assert result["success"] is True
 
 
@@ -147,7 +158,7 @@ class TestErrorScenarios:
         result_json = await incident_tools.call_tool(
             "get_incidents", {"component": "nonexistent-component-xyz"}
         )
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         assert "incidents" in result

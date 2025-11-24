@@ -6,6 +6,7 @@ This module contains the main MCP server class that handles protocol communicati
 tool management, and security validation.
 """
 
+import asyncio
 from typing import Any, Dict, List
 
 from mcp.server import Server
@@ -88,6 +89,9 @@ class KonfluxDevLakeMCPServer:
             await self.db_connection.close()
 
             self.logger.info("Server shutdown complete")
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            # Ignore cancellation errors during shutdown
+            self.logger.debug("Shutdown interrupted")
         except Exception as e:
             self.logger.error(f"Error during shutdown: {e}")
 

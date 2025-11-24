@@ -10,7 +10,7 @@ Tests the IncidentTools class functionality including:
 """
 
 import pytest
-import json
+from toon_format import decode as toon_decode
 
 from tools.devlake.incident_tools import IncidentTools
 from mcp.types import Tool
@@ -57,7 +57,7 @@ class TestIncidentTools:
         }
 
         result_json = await incident_tools.call_tool("get_incidents", {})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         assert "filters" in result
@@ -86,7 +86,7 @@ class TestIncidentTools:
         }
 
         result_json = await incident_tools.call_tool("get_incidents", {"status": "DONE"})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         assert result["filters"]["status"] == "DONE"
@@ -109,7 +109,7 @@ class TestIncidentTools:
         }
 
         result_json = await incident_tools.call_tool("get_incidents", {"component": "api-service"})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         assert result["filters"]["component"] == "api-service"
@@ -130,7 +130,7 @@ class TestIncidentTools:
         }
 
         result_json = await incident_tools.call_tool("get_incidents", {"days_back": 30})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         assert result["filters"]["days_back"] == 30
@@ -153,7 +153,7 @@ class TestIncidentTools:
         result_json = await incident_tools.call_tool(
             "get_incidents", {"start_date": "2024-01-15", "end_date": "2024-01-16"}
         )
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         assert "2024-01-15" in result["filters"]["start_date"]
@@ -177,7 +177,7 @@ class TestIncidentTools:
             "get_incidents",
             {"start_date": "2024-01-15 10:00:00", "end_date": "2024-01-16 12:00:00"},
         )
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         assert result["filters"]["start_date"] == "2024-01-15 10:00:00"
@@ -200,7 +200,7 @@ class TestIncidentTools:
             result_json = await incident_tools.call_tool(
                 "get_incidents", {"date_field": date_field}
             )
-            result = json.loads(result_json)
+            result = toon_decode(result_json)
 
             assert result["success"] is True
             assert result["filters"]["date_field"] == date_field
@@ -211,7 +211,7 @@ class TestIncidentTools:
         result_json = await incident_tools.call_tool(
             "get_incidents", {"date_field": "invalid_field"}
         )
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is False
         assert "Invalid date_field 'invalid_field'" in result["error"]
@@ -229,7 +229,7 @@ class TestIncidentTools:
         }
 
         result_json = await incident_tools.call_tool("get_incidents", {"limit": 50})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         assert result["filters"]["limit"] == 50
@@ -257,7 +257,7 @@ class TestIncidentTools:
         result_json = await incident_tools.call_tool(
             "get_incidents", {"status": "DONE", "component": "api-service", "limit": 25}
         )
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         assert result["filters"]["status"] == "DONE"
@@ -273,7 +273,7 @@ class TestIncidentTools:
         }
 
         result_json = await incident_tools.call_tool("get_incidents", {})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is False
         assert "Database connection failed" in result["error"]
@@ -284,7 +284,7 @@ class TestIncidentTools:
         mock_db_connection.execute_query.side_effect = Exception("Unexpected error")
 
         result_json = await incident_tools.call_tool("get_incidents", {})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is False
         assert "Unexpected error" in result["error"]
@@ -293,7 +293,7 @@ class TestIncidentTools:
     async def test_unknown_tool_call(self, incident_tools):
         """Test calling an unknown tool."""
         result_json = await incident_tools.call_tool("unknown_tool", {})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is False
         assert "Unknown incident tool: unknown_tool" in result["error"]

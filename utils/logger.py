@@ -27,6 +27,37 @@ def get_logger(name: str = None) -> logging.Logger:
         return _logger_instance
 
 
+class ClosedResourceErrorFilter(logging.Filter):
+    """Filter to suppress ClosedResourceError from MCP library (normal client disconnections)"""
+
+    def filter(self, record):
+        # Suppress ClosedResourceError messages from MCP library
+        message = record.getMessage()
+
+        # Check if this is from MCP server streamable_http
+        if "mcp.server" in record.name or "streamable_http" in record.name:
+            # Suppress ClosedResourceError and related connection errors
+            if any(
+                keyword in message
+                for keyword in [
+                    "ClosedResourceError",
+                    "closed resource",
+                    "Error in message router",
+                    "receive_nowait",
+                    "anyio.ClosedResourceError",
+                ]
+            ):
+                return False
+
+        # Also check the exception type if available
+        if hasattr(record, "exc_info") and record.exc_info:
+            exc_type = record.exc_info[0]
+            if exc_type and "ClosedResourceError" in str(exc_type):
+                return False
+
+        return True
+
+
 def _setup_logging() -> logging.Logger:
     """Setup logging configuration"""
     # Create logs directory if it doesn't exist
@@ -38,20 +69,32 @@ def _setup_logging() -> logging.Logger:
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
     )
 
+    # Create filter for MCP library errors
+    closed_resource_filter = ClosedResourceErrorFilter()
+
     # Create root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
+    root_logger.addFilter(closed_resource_filter)
+
+    # Also filter MCP library loggers specifically
+    mcp_loggers = ["mcp.server", "mcp.server.streamable_http", "mcp.server.streamable_http_manager"]
+    for logger_name in mcp_loggers:
+        mcp_logger = logging.getLogger(logger_name)
+        mcp_logger.addFilter(closed_resource_filter)
+        mcp_logger.setLevel(logging.WARNING)  # Only show warnings and above from MCP library
 
     # Clear existing handlers
     root_logger.handlers.clear()
 
-    # Console handler
+    # Console handler with filter
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)
+    console_handler.addFilter(closed_resource_filter)
     root_logger.addHandler(console_handler)
 
-    # File handler for general logs
+    # File handler for general logs with filter
     file_handler = logging.handlers.RotatingFileHandler(
         logs_dir / "konflux_devlake_mcp_server.log",
         maxBytes=10 * 1024 * 1024,  # 10MB
@@ -59,9 +102,10 @@ def _setup_logging() -> logging.Logger:
     )
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
+    file_handler.addFilter(closed_resource_filter)
     root_logger.addHandler(file_handler)
 
-    # Error file handler
+    # Error file handler with filter (but still log other errors)
     error_handler = logging.handlers.RotatingFileHandler(
         logs_dir / "konflux_devlake_mcp_server_error.log",
         maxBytes=10 * 1024 * 1024,  # 10MB
@@ -69,6 +113,7 @@ def _setup_logging() -> logging.Logger:
     )
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(formatter)
+    error_handler.addFilter(closed_resource_filter)
     root_logger.addHandler(error_handler)
 
     # Create main logger
@@ -190,8 +235,7 @@ class LoggerMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        logger_name = f"{self.__class__.__module__}.{self.__class__.__name__}"
-        self.logger = get_logger(logger_name)
+        self.logger = get_logger(f"{self.__class__.__module__}.{self.__class__.__name__}")
 
     def log_info(self, message: str):
         """Log info message"""

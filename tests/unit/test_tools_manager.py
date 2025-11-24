@@ -10,6 +10,7 @@ Tests the KonfluxDevLakeToolsManager class functionality including:
 
 import pytest
 import json
+from toon_format import decode as toon_decode
 
 from tools.tools_manager import KonfluxDevLakeToolsManager
 from tools.database_tools import DatabaseTools
@@ -30,12 +31,13 @@ class TestKonfluxDevLakeToolsManager:
     def test_initialization(self, tools_manager, mock_db_connection):
         """Test tools manager initialization."""
         assert tools_manager.db_connection == mock_db_connection
-        assert len(tools_manager._tool_modules) == 3
+        assert len(tools_manager._tool_modules) == 4
 
         module_types = [type(module).__name__ for module in tools_manager._tool_modules]
         assert "DatabaseTools" in module_types
         assert "IncidentTools" in module_types
         assert "DeploymentTools" in module_types
+        assert "PRRetestTools" in module_types
 
     def test_tool_mapping_creation(self, tools_manager):
         """Test that tool mapping is created correctly."""
@@ -48,6 +50,7 @@ class TestKonfluxDevLakeToolsManager:
             "get_table_schema",
             "get_incidents",
             "get_deployments",
+            "analyze_pr_retests",
         ]
 
         for tool_name in expected_tools:
@@ -60,7 +63,7 @@ class TestKonfluxDevLakeToolsManager:
         tools = await tools_manager.list_tools()
 
         assert isinstance(tools, list)
-        assert len(tools) >= 6
+        assert len(tools) >= 7
 
         for tool in tools:
             assert isinstance(tool, Tool)
@@ -129,13 +132,14 @@ class TestKonfluxDevLakeToolsManager:
         assert "tools_by_module" in stats
         assert "available_tools" in stats
 
-        assert stats["modules"] == 3
-        assert stats["total_tools"] >= 6
+        assert stats["modules"] == 4
+        assert stats["total_tools"] >= 7
 
         tools_by_module = stats["tools_by_module"]
         assert "DatabaseTools" in tools_by_module
         assert "IncidentTools" in tools_by_module
         assert "DeploymentTools" in tools_by_module
+        assert "PRRetestTools" in tools_by_module
 
         available_tools = stats["available_tools"]
         assert "connect_database" in available_tools
@@ -200,7 +204,11 @@ class TestKonfluxDevLakeToolsManager:
 
         assert len(results) == 4
         for result in results:
-            result_data = json.loads(result)
+            # Try TOON decode first (for incident tools), fall back to JSON
+            try:
+                result_data = toon_decode(result)
+            except Exception:
+                result_data = json.loads(result)
             assert result_data["success"] is True
 
     def test_tool_mapping_completeness(self, tools_manager):
@@ -244,4 +252,4 @@ class TestKonfluxDevLakeToolsManager:
 
         assert module1 is module2 is module3
 
-        assert len(tools_manager._tool_modules) == 3
+        assert len(tools_manager._tool_modules) == 4

@@ -148,11 +148,11 @@ When adding new diagrams:
 ## Legend / Color Codes
 
 Diagrams use consistent color coding:
-- 🔵 Blue: User-facing components
-- 🟡 Yellow: Core application logic
-- 🟢 Green: Tools and modules
-- 🔴 Red: Security and blocking
-- 🟣 Purple: External services/databases
+- Blue: User-facing components
+- Yellow: Core application logic
+- Green: Tools and modules
+- Red: Security and blocking
+- Purple: External services/databases
 
 ---
 

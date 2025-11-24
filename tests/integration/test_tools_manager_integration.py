@@ -7,6 +7,7 @@ with real database operations and proper tool routing.
 
 import pytest
 import json
+from toon_format import decode as toon_decode
 
 from tools.tools_manager import KonfluxDevLakeToolsManager
 from utils.db import KonfluxDevLakeConnection
@@ -37,6 +38,7 @@ class TestToolsManagerIntegration:
         assert "get_incidents" in tool_names
 
         assert "get_deployments" in tool_names
+        assert "analyze_pr_retests" in tool_names
 
     async def test_call_database_tool(self, integration_db_connection: KonfluxDevLakeConnection):
         """Test calling a database tool through the manager."""
@@ -55,7 +57,7 @@ class TestToolsManagerIntegration:
         tools_manager = KonfluxDevLakeToolsManager(integration_db_connection)
 
         result_json = await tools_manager.call_tool("get_incidents", {})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         assert "incidents" in result
@@ -96,15 +98,17 @@ class TestToolsManagerIntegration:
         assert "available_tools" in stats
 
         assert stats["total_tools"] > 0
-        assert stats["modules"] == 3
+        assert stats["modules"] == 4
 
         assert "DatabaseTools" in stats["tools_by_module"]
         assert "IncidentTools" in stats["tools_by_module"]
         assert "DeploymentTools" in stats["tools_by_module"]
+        assert "PRRetestTools" in stats["tools_by_module"]
 
         assert stats["tools_by_module"]["DatabaseTools"] > 0
         assert stats["tools_by_module"]["IncidentTools"] > 0
         assert stats["tools_by_module"]["DeploymentTools"] > 0
+        assert stats["tools_by_module"]["PRRetestTools"] > 0
 
     async def test_validate_tool_exists(self, integration_db_connection: KonfluxDevLakeConnection):
         """Test validating tool existence."""
@@ -113,6 +117,7 @@ class TestToolsManagerIntegration:
         assert tools_manager.validate_tool_exists("list_databases") is True
         assert tools_manager.validate_tool_exists("get_incidents") is True
         assert tools_manager.validate_tool_exists("get_deployments") is True
+        assert tools_manager.validate_tool_exists("analyze_pr_retests") is True
 
         assert tools_manager.validate_tool_exists("nonexistent_tool") is False
 
@@ -123,10 +128,12 @@ class TestToolsManagerIntegration:
         db_module = tools_manager.get_tool_module("list_databases")
         incident_module = tools_manager.get_tool_module("get_incidents")
         deployment_module = tools_manager.get_tool_module("get_deployments")
+        pr_retest_module = tools_manager.get_tool_module("analyze_pr_retests")
 
         assert db_module.__class__.__name__ == "DatabaseTools"
         assert incident_module.__class__.__name__ == "IncidentTools"
         assert deployment_module.__class__.__name__ == "DeploymentTools"
+        assert pr_retest_module.__class__.__name__ == "PRRetestTools"
 
     async def test_get_tool_module_nonexistent(
         self, integration_db_connection: KonfluxDevLakeConnection
@@ -146,7 +153,7 @@ class TestToolsManagerIntegration:
         tools_manager = KonfluxDevLakeToolsManager(integration_db_connection)
 
         result_json = await tools_manager.call_tool("get_incidents", {"status": "DONE", "limit": 5})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
         assert result["filters"]["status"] == "DONE"
@@ -163,7 +170,7 @@ class TestToolsManagerIntegration:
         assert result1["success"] is True
 
         result2_json = await tools_manager.call_tool("get_incidents", {})
-        result2 = json.loads(result2_json)
+        result2 = toon_decode(result2_json)
         assert result2["success"] is True
 
         result3_json = await tools_manager.call_tool("get_deployments", {})

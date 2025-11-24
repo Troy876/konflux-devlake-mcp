@@ -69,7 +69,7 @@ class ToolHandler:
             self.logger.error(f"Failed to handle tool call request: {e}")
             return self._create_error_response(f"Tool call failed: {str(e)}", name, arguments)
 
-    async def _validate_tool_request(self, name, arguments):
+    async def _validate_tool_request(self, name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
         Validate tool request for security and correctness.
 
@@ -175,8 +175,5 @@ class ToolHandler:
             error_result["arguments"] = arguments
 
         return [
-            TextContent(
-                type="text",
-                text=json.dumps(error_result, indent=2, cls=DateTimeEncoder),
-            )
+            TextContent(type="text", text=json.dumps(error_result, indent=2, cls=DateTimeEncoder))
         ]

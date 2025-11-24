@@ -194,7 +194,12 @@ async def run_server(config: KonfluxDevLakeConfig) -> int:
 
         server = server_factory.create_server(config)
         transport_kwargs = (
-            {"host": config.server.host, "port": config.server.port}
+            {
+                "host": config.server.host,
+                "port": config.server.port,
+                "timeout_keep_alive": config.server.timeout_keep_alive,
+                "timeout_graceful_shutdown": config.server.timeout_graceful_shutdown,
+            }
             if config.server.transport == "http"
             else {}
         )
@@ -204,7 +209,7 @@ async def run_server(config: KonfluxDevLakeConfig) -> int:
         await server.start(transport)
         return 0
 
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, asyncio.CancelledError):
         logger.info("Received shutdown signal")
         return 0
     except Exception as e:
@@ -213,12 +218,15 @@ async def run_server(config: KonfluxDevLakeConfig) -> int:
     finally:
         logger.info("Shutting down server")
         try:
-            if server:
+            if "server" in locals() and server:
                 await server.shutdown()
-            if transport:
+            if "transport" in locals() and transport:
                 await transport.stop()
             shutdown_logging()
             logger.info("Server shutdown complete")
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            # Ignore cancellation errors during shutdown
+            logger.debug("Shutdown interrupted")
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
 

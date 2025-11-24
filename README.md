@@ -6,7 +6,7 @@
 
 A MCP server that enables natural language querying of Konflux DevLake databases. This server acts as a bridge between AI assistants and your DevLake database, allowing you to ask questions in plain language and get structured data back.
 
-## 📚 Documentation
+## Documentation
 
 - **[Full Architecture Documentation](./docs/ARCHITECTURE.md)** - Complete system architecture and design patterns
 - **[Documentation Index](./docs/README.md)** - Visual diagrams and documentation catalog
@@ -17,11 +17,12 @@ A MCP server that enables natural language querying of Konflux DevLake databases
 ### Option 1: Python (Development)
 
 1. **Install dependencies**:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-2. **Start the server**:
+1. **Start the server**:
 
 ```bash
 python konflux-devlake-mcp.py --transport http --host 0.0.0.0 --port 3000 --db-host localhost --db-port 3306 --db-user root --db-password password --db-database lake
@@ -30,11 +31,13 @@ python konflux-devlake-mcp.py --transport http --host 0.0.0.0 --port 3000 --db-h
 ### Option 2: Docker (Production)
 
 1. **Build the Docker image**:
+
 ```bash
 docker build -t konflux-devlake-mcp:latest .
 ```
 
-2. **Run the container**:
+1. **Run the container**:
+
 ```bash
 docker run -d \
   --name konflux-mcp-server \
@@ -48,7 +51,8 @@ docker run -d \
   konflux-devlake-mcp:latest
 ```
 
-3. **Push to registry (if needed)**:
+1. **Push to registry (if needed)**:
+
 ```bash
 docker tag konflux-devlake-mcp:latest quay.io/flacatus/mcp-lake:1.0.0
 docker push quay.io/flacatus/mcp-lake:1.0.0
@@ -70,6 +74,20 @@ docker push quay.io/flacatus/mcp-lake:1.0.0
 | `--db-database` | Database name | `--db-database lake` |
 | `--log-level` | Logging level | `--log-level INFO` |
 
+### Timeout Configuration
+
+The server includes configurable timeout settings optimized for LLM connections:
+
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `SERVER_TIMEOUT_KEEP_ALIVE` | HTTP keep-alive timeout in seconds | `600` (10 minutes) |
+| `SERVER_TIMEOUT_GRACEFUL_SHUTDOWN` | Graceful shutdown timeout in seconds | `120` (2 minutes) |
+| `DB_CONNECT_TIMEOUT` | Database connection timeout in seconds | `60` (1 minute) |
+| `DB_READ_TIMEOUT` | Database read timeout in seconds | `600` (10 minutes) |
+| `DB_WRITE_TIMEOUT` | Database write timeout in seconds | `120` (2 minutes) |
+
+These high default values ensure that long-running LLM requests and complex database queries don't timeout prematurely.
+
 ### Environment Variables (Alternative)
 
 ```bash
@@ -82,14 +100,23 @@ export TRANSPORT=http
 export SERVER_HOST=0.0.0.0
 export SERVER_PORT=3000
 export LOG_LEVEL=INFO
+
+# Timeout Configuration (for LLM connections)
+export SERVER_TIMEOUT_KEEP_ALIVE=600      # HTTP keep-alive timeout in seconds (default: 600)
+export SERVER_TIMEOUT_GRACEFUL_SHUTDOWN=120  # Graceful shutdown timeout in seconds (default: 120)
+export DB_CONNECT_TIMEOUT=60              # Database connection timeout in seconds (default: 60)
+export DB_READ_TIMEOUT=600                # Database read timeout in seconds (default: 600)
+export DB_WRITE_TIMEOUT=120               # Database write timeout in seconds (default: 120)
 ```
 
 Then run:
+
 ```bash
 python konflux-devlake-mcp.py
 ```
 
 ### Help Command
+
 ```bash
 python konflux-devlake-mcp.py --help
 ```
@@ -99,16 +126,30 @@ python konflux-devlake-mcp.py --help
 This server provides several specialized tools for working with your DevLake data:
 
 - **Database Tools**: Connect to your database, list available databases and tables, execute custom SQL queries, and get detailed table schemas
-- **Incident Analysis**: Get unique incidents with automatic deduplication, analyze incident patterns, and track resolution times
+- **Incident Analysis**: Get unique incidents with automatic deduplication, analyze incident patterns, and track resolution times. Returns data in TOON format for token efficiency.
 - **Deployment Tracking**: Monitor deployment data with advanced filtering, track deployment frequency, and analyze service distribution
+- **PR Retest Analysis**: Comprehensive analysis of pull requests that required manual retest commands (`/retest`). Provides detailed statistics including:
+  - Total count of manual retest comments (excluding bot comments)
+  - Number of PRs affected and average retests per PR
+  - Top PRs with most retests (including PR title, URL, duration, changes, and status)
+  - Analysis of root causes and failure patterns
+  - Breakdown by PR category (bug fixes, features, dependencies, etc.)
+  - Timeline visualization data
+  - Actionable recommendations to reduce retest frequency
+  - Returns data in TOON format for token efficiency
 
 ## Features
 
 - **Natural Language Processing**: Convert plain English questions into SQL queries automatically
 - **Security First**: Built-in SQL injection detection and comprehensive query validation to protect your data
-- **DevLake Integration**: Specialized tools for analyzing incident and deployment data from Konflux DevLake
-- **Flexible Transport**: Support for both HTTP and stdio transport protocols
-- **Comprehensive Logging**: Detailed logging with rotation and error tracking for debugging and monitoring
+- **DevLake Integration**: Specialized tools for analyzing incident, deployment, and PR retest data from Konflux DevLake
+- **Token-Efficient Responses**: Uses TOON format for tool responses (incident tools and PR retest tools), reducing token consumption by 30-60% compared to JSON
+- **Project & Repository Filtering**: Advanced filtering capabilities for analyzing data by DevLake project and repository name
+- **Flexible Transport**: Support for both HTTP and stdio transport protocols with graceful error handling
+- **Comprehensive Logging**: Detailed logging with rotation, error tracking, and intelligent filtering of expected disconnection errors
+- **LLM-Optimized Timeouts**: High default timeout values (10 minutes keep-alive) to support long-running LLM requests and database queries
+- **Configurable Timeouts**: All timeout settings are configurable via environment variables for different deployment scenarios
+- **Enhanced Error Handling**: Graceful handling of client disconnections (`ClosedResourceError`) and server shutdowns (`CancelledError`) without noisy error logs
 
 ## Security
 
@@ -119,6 +160,17 @@ Your data security is our priority:
 - **Data Masking**: Sensitive information is automatically masked in query results
 - **Access Control**: Database-level access control ensures only authorized operations are performed
 
+## Response Format
+
+The server uses **TOON format** (Token-Optimized Object Notation) for tool responses to reduce token consumption:
+
+- **Incident Tools**: All responses use TOON format (30-60% token reduction vs JSON)
+- **PR Retest Analysis Tool**: All responses use TOON format (30-60% token reduction vs JSON)
+- **Deployment Tools**: Currently use JSON format
+- **Database Tools**: Currently use JSON format
+
+TOON format is a compact, human-readable serialization format that significantly reduces token costs when working with LLMs while maintaining full data fidelity.
+
 ## Monitoring
 
 Keep track of your server's health and performance:
@@ -126,6 +178,7 @@ Keep track of your server's health and performance:
 - **Application Logs**: `logs/konflux_devlake_mcp_server.log` - General server activity and operations
 - **Error Logs**: `logs/konflux_devlake_mcp_server_error.log` - Detailed error information for troubleshooting
 - **Health Check**: `GET http://localhost:3000/health` - Monitor server status and connectivity
+- **Error Handling**: The server gracefully handles client disconnections and server shutdowns without logging expected errors (e.g., `ClosedResourceError`, `CancelledError`)
 
 ### Testing
 
@@ -172,6 +225,18 @@ This MCP server is particularly useful for:
 
 - **Data Analysts**: Quickly query DevLake data without writing complex SQL
 - **DevOps Teams**: Monitor incidents and deployments through natural language queries
-- **AI Assistants**: Enable AI tools to access and analyze your DevLake data
+- **AI Assistants**: Enable AI tools to access and analyze your DevLake data with optimized token usage
 - **Business Intelligence**: Generate reports and insights from your DevLake database
-- **Development Teams**: Debug and analyze application performance data
+- **Development Teams**: Debug and analyze application performance data, identify PR retest patterns, and optimize CI/CD workflows
+- **Quality Assurance**: Analyze PR retest frequency, identify flaky tests, and improve test reliability
+
+## Recent Updates
+
+### Version 1.0.0+ Features
+
+- **PR Retest Analysis Tool**: New comprehensive tool for analyzing pull requests that required manual retest commands
+- **TOON Format Support**: Incident tools and PR retest tools now use TOON format for 30-60% token reduction
+- **Enhanced Timeout Configuration**: High default timeouts (10 minutes) optimized for LLM connections
+- **Improved Error Handling**: Graceful handling of client disconnections and server shutdowns
+- **Database Timeout Settings**: Configurable timeouts for database connections to handle long-running queries
+- **Project & Repository Filtering**: Enhanced filtering capabilities for precise data analysis

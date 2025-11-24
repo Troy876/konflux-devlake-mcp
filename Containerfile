@@ -16,6 +16,7 @@ WORKDIR /app
 # libffi-devel: Required for cryptography
 # openssl-devel: Required for SSL/TLS support
 # python3.11-devel: Python development headers
+# git: Required for installing packages from git repositories (toon-format)
 # Note: Python 3.11 is required for mcp>=1.8.0
 RUN dnf install -y --nodocs \
     python3.11 \
@@ -25,6 +26,7 @@ RUN dnf install -y --nodocs \
     gcc-c++ \
     libffi-devel \
     openssl-devel \
+    git \
     && dnf clean all \
     && rm -rf /var/cache/dnf
 

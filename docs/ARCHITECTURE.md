@@ -101,9 +101,11 @@ This eliminates the need for users to know SQL syntax while maintaining security
 2. **Modular Architecture**: Separation of concerns with clear module boundaries
 3. **Security First**: Built-in SQL injection protection, data masking, and validation
 4. **Async/Await**: Full asynchronous I/O for high performance
-5. **Transport Agnostic**: Support for HTTP (production) and STDIO (development)
+5. **Transport Agnostic**: Support for HTTP (production) and STDIO (development) with graceful error handling
 6. **Extensibility**: Plugin-based tools system for easy extension
 7. **Production Ready**: Comprehensive logging, error handling, and monitoring
+8. **Token Efficiency**: TOON format support for reduced token consumption in LLM interactions
+9. **Robust Error Handling**: Intelligent filtering of expected errors, graceful shutdown, and connection error management
 
 ---
 
@@ -411,6 +413,15 @@ class HttpTransport:
    - Environment filtering (PRODUCTION, STAGING, etc.)
    - Project-based filtering
 
+4. **PR Retest Analysis Tools** (`tools/devlake/pr_retest_tools.py`)
+   - `analyze_pr_retests`: Comprehensive PR retest analysis
+   - Project and repository filtering
+   - Retest pattern analysis and root cause identification
+   - Category breakdown (bug fixes, features, dependencies, etc.)
+   - Timeline visualization data
+   - Actionable recommendations
+   - Returns data in TOON format for token efficiency (30-60% reduction vs JSON)
+
 **Base Tool Interface**:
 ```python
 class BaseTool:
@@ -423,8 +434,20 @@ class BaseTool:
 1. ToolsManager initializes all tool modules
 2. Creates tool name → module mapping
 3. Routes incoming requests to appropriate module
-4. Returns serialized JSON results
+4. Returns serialized results (JSON or TOON format)
 ```
+
+**Response Format**:
+- Most tools return JSON format for compatibility
+- PR Retest Analysis tool uses TOON format for token efficiency
+- TOON format reduces token consumption by 30-60% compared to JSON
+- Automatic format selection based on tool type
+
+**Project and Repository Filtering**:
+- All DevLake tools support project-based filtering via `project_mapping` table
+- Repository filtering available for PR and deployment analysis
+- Filters applied at SQL query level for optimal performance
+- Supports partial matching for repository names
 
 ---
 
@@ -573,6 +596,12 @@ class LoggingConfig:
    - Database operation logging
    - Security event logging
 
+5. **Intelligent Error Filtering**
+   - Suppresses expected errors (e.g., `ClosedResourceError` from client disconnections)
+   - Filters MCP library noise (connection errors, normal disconnections)
+   - Reduces log clutter while maintaining important error visibility
+   - Graceful handling of `CancelledError` during server shutdown
+
 **Example Logging**:
 ```python
 logger.info("Starting Konflux DevLake MCP Server")
@@ -675,6 +704,31 @@ logger.warning("Potential SQL injection detected")
 - **Description**: Get deployments with filtering
 - **Arguments**: Multiple filter parameters
 - **Returns**: Deployment list with metadata
+
+#### PR Retest Analysis Tools
+
+**`analyze_pr_retests`**
+- **Description**: Comprehensive analysis of pull requests that required manual retest commands (comments containing '/retest'). Provides detailed statistics, pattern analysis, and actionable recommendations.
+- **Arguments**:
+  - `repo_name` (string, optional): Repository name to analyze (e.g., 'integration-service')
+  - `project_name` (string, optional): DevLake project name (e.g., 'Secureflow - Konflux - Global')
+  - `days_back` (integer, optional): Number of days back to analyze (default: 90)
+  - `start_date` (string, optional): Start date for analysis (format: YYYY-MM-DD)
+  - `end_date` (string, optional): End date for analysis (format: YYYY-MM-DD)
+  - `top_n` (integer, optional): Number of top PRs to return (default: 15, max: 50)
+  - `exclude_bots` (boolean, optional): Exclude bot comments from analysis (default: true)
+- **Returns**: TOON-encoded string containing:
+  - Executive summary (total retests, affected PRs, average retests per PR)
+  - Top PRs by retest count with detailed metrics
+  - Category breakdown (bug fixes, features, dependencies, etc.)
+  - Timeline data for visualization
+  - Pattern analysis by PR status
+  - Actionable recommendations
+- **Features**:
+  - Exact `/retest` command matching (case-insensitive, handles quoted comments)
+  - Project and repository filtering via `project_mapping` table
+  - Bot comment exclusion
+  - Token-efficient TOON format (30-60% reduction vs JSON)
 
 ---
 

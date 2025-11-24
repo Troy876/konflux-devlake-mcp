@@ -53,18 +53,26 @@ class KonfluxDevLakeConnection:
     async def connect(self) -> Dict[str, Any]:
         """Connect to the database"""
         try:
-            host = self.config["host"]
-            port = self.config["port"]
-            self.logger.info(f"Connecting to database at {host}:{port}")
+            self.logger.info(
+                f"Connecting to database at {self.config['host']}:{self.config['port']}"
+            )
+
+            # Database connection with timeout settings for long-running queries
+            connect_timeout = self.config.get("connect_timeout", 30)
+            read_timeout = self.config.get("read_timeout", 300)  # 5 minutes for long queries
+            write_timeout = self.config.get("write_timeout", 60)
 
             self.connection = pymysql.connect(
-                host=host,
-                port=port,
+                host=self.config["host"],
+                port=self.config["port"],
                 user=self.config["user"],
                 password=self.config["password"],
                 database=self.config.get("database"),
                 charset="utf8mb4",
                 cursorclass=DictCursor,
+                connect_timeout=connect_timeout,
+                read_timeout=read_timeout,
+                write_timeout=write_timeout,
             )
 
             # Test the connection
@@ -91,7 +99,7 @@ class KonfluxDevLakeConnection:
             log_database_operation("connect", success=False, error=str(e))
             return {"success": False, "error": str(e)}
 
-    async def execute_query(self, query, limit=100):
+    async def execute_query(self, query: str, limit: int = 100) -> Dict[str, Any]:
         """Execute a SQL query"""
         try:
             if not self.connection:
@@ -99,6 +107,7 @@ class KonfluxDevLakeConnection:
                 await self.connect()
 
             self.logger.debug(f"Executing query: {query[:100]}...")
+
             with self.connection.cursor() as cursor:
                 cursor.execute(query)
                 results = cursor.fetchall()
@@ -133,6 +142,7 @@ class KonfluxDevLakeConnection:
             if not self.connection:
                 self.logger.debug("No active connection to test")
                 return False
+
             with self.connection.cursor() as cursor:
                 cursor.execute("SELECT 1")
                 cursor.fetchone()

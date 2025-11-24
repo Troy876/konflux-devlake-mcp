@@ -2,7 +2,7 @@
 
 Welcome to the comprehensive documentation for the Konflux DevLake MCP Server.
 
-## 📚 Documentation Index
+## Documentation Index
 
 ### Core Documentation
 
@@ -48,8 +48,9 @@ All diagrams are in Mermaid format and can be viewed in any Mermaid-compatible v
 ### Quality Reports
 
 - **[Retest Analysis Prompt](./.prompts/quality_reports/retest_average.md)** - Prompt template for analyzing PR retest patterns
+- **PR Retest Analysis Tool**: Comprehensive tool for analyzing pull requests that required manual retest commands, with project/repository filtering, pattern analysis, and actionable recommendations
 
-## 🎨 Viewing Diagrams
+## Viewing Diagrams
 
 ### Option 1: GitHub/GitLab
 - Mermaid diagrams are automatically rendered in README files
@@ -75,7 +76,7 @@ mmdc -i docs/natural-language-flow.mmd -o docs/images/natural-language-flow.png
 mmdc -i docs/data-flow-diagram.mmd -o docs/images/data-flow-diagram.png
 ```
 
-## 📊 Diagram Catalog
+## Diagram Catalog
 
 ### System Architecture
 - **Purpose**: Overall system design
@@ -107,7 +108,7 @@ mmdc -i docs/data-flow-diagram.mmd -o docs/images/data-flow-diagram.png
 - **Audience**: Developers
 - **File**: `tools-architecture.mmd`
 
-## 🚀 Quick Start
+## Quick Start
 
 1. **New to the project?** Start with the [Main README](../README.md)
 2. **Want to understand the architecture?** Read [ARCHITECTURE.md](./ARCHITECTURE.md)
@@ -115,7 +116,7 @@ mmdc -i docs/data-flow-diagram.mmd -o docs/images/data-flow-diagram.png
 4. **Want to extend functionality?** See "Extension Points" in ARCHITECTURE.md
 5. **Deploying to production?** Check the deployment diagrams
 
-## 🔧 Contributing
+## Contributing
 
 When adding new documentation:
 
@@ -124,7 +125,7 @@ When adding new documentation:
 3. **API changes**: Update architecture docs
 4. **Security updates**: Update security diagrams
 
-## 📝 Diagram Format
+## Diagram Format
 
 All diagrams use [Mermaid](https://mermaid.js.org/) syntax, which provides:
 - Text-based diagram definitions (version control friendly)
@@ -132,7 +133,7 @@ All diagrams use [Mermaid](https://mermaid.js.org/) syntax, which provides:
 - Multiple export formats (PNG, SVG, PDF)
 - Interactive diagrams in web viewers
 
-## 🔗 External Links
+## External Links
 
 - [Mermaid Documentation](https://mermaid.js.org/intro/)
 - [Mermaid Live Editor](https://mermaid.live/)

@@ -172,6 +172,9 @@ class TestKonfluxDevLakeConfig:
             "user": "test-user",
             "password": "test-password",
             "database": "test-db",
+            "connect_timeout": 60,
+            "read_timeout": 600,
+            "write_timeout": 120,
         }
 
         assert db_config == expected

@@ -7,6 +7,7 @@ in the actual database schema.
 
 import pytest
 import json
+from toon_format import decode as toon_decode
 
 from utils.db import KonfluxDevLakeConnection
 from tools.devlake.incident_tools import IncidentTools
@@ -104,7 +105,7 @@ class TestDataQualityIntegration:
         incident_tools = IncidentTools(integration_db_connection)
 
         result_json = await incident_tools.call_tool("get_incidents", {"status": "DONE"})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
 
@@ -181,7 +182,7 @@ class TestDataQualityIntegration:
         incident_tools = IncidentTools(integration_db_connection)
 
         result_json = await incident_tools.call_tool("get_incidents", {})
-        result = json.loads(result_json)
+        result = toon_decode(result_json)
 
         assert result["success"] is True
 

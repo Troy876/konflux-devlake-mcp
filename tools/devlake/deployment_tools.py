@@ -45,18 +45,16 @@ class DeploymentTools(BaseTool):
             Tool(
                 name="get_deployments",
                 description=(
-                    "🚀 **Comprehensive Deployment Analytics Tool** - Retrieves "
-                    "deployment data from the Konflux DevLake database with "
-                    "advanced filtering capabilities. This tool provides "
-                    "comprehensive deployment information including "
-                    "deployment_id, display_title, url, result, environment, "
-                    "finished_date, and project details. Supports filtering "
-                    "by project (e.g., 'Konflux_Pilot_Team'), environment "
-                    "(e.g., 'PRODUCTION', 'STAGING', 'DEVELOPMENT'), time "
-                    "range (days_back, start_date, end_date), and result "
-                    "limits. Perfect for deployment frequency analysis, "
-                    "release tracking, and operational reporting. Returns "
-                    "deployments sorted by finished_date (newest first)."
+                    "**Comprehensive Deployment Analytics Tool** - Retrieves deployment data "
+                    "from the Konflux DevLake database with advanced filtering capabilities. "
+                    "This tool provides comprehensive deployment information including "
+                    "deployment_id, display_title, url, result, environment, finished_date, "
+                    "and project details. Supports filtering by project (e.g., "
+                    "'Konflux_Pilot_Team'), environment (e.g., 'PRODUCTION', 'STAGING', "
+                    "'DEVELOPMENT'), time range (days_back, start_date, end_date), and result "
+                    "limits. Perfect for deployment frequency analysis, release tracking, "
+                    "and operational reporting. Returns deployments sorted by finished_date "
+                    "(newest first)."
                 ),
                 inputSchema={
                     "type": "object",
@@ -262,13 +260,12 @@ class DeploymentTools(BaseTool):
             # Add limit
             base_query += f" LIMIT {limit}"
 
-            log_message = (
+            self.logger.info(
                 f"Getting deployments with filters: project={project}, "
                 f"environment={environment}, days_back={days_back}, "
                 f"start_date={start_date}, end_date={end_date}, "
                 f"date_field={date_field}, limit={limit}"
             )
-            self.logger.info(log_message)
 
             result = await self.db_connection.execute_query(base_query, limit)
 

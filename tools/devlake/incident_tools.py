@@ -6,14 +6,14 @@ Contains tools for incident analysis and management with improved modularity
 and maintainability.
 """
 
-import json
+from datetime import datetime, timedelta
 from typing import Any, Dict, List
 
 from mcp.types import Tool
+from toon_format import encode as toon_encode
 
 from tools.base.base_tool import BaseTool
 from utils.logger import get_logger, log_tool_call
-from utils.db import DateTimeEncoder
 
 
 class IncidentTools(BaseTool):
@@ -45,17 +45,15 @@ class IncidentTools(BaseTool):
             Tool(
                 name="get_incidents",
                 description=(
-                    "🚨 **Comprehensive Incident Analysis Tool** - Retrieves unique "
-                    "incidents from the Konflux DevLake database with advanced "
-                    "filtering capabilities. This tool automatically deduplicates "
-                    "incidents by incident_key to show only the most recent "
-                    "version of each incident. Supports filtering by status "
-                    "(e.g., 'DONE', 'IN_PROGRESS', 'OPEN'), component name, and "
-                    "flexible date ranges. Provides comprehensive incident data "
-                    "including incident_key, title, description, status, "
-                    "created_date, resolution_date, lead_time_minutes, "
-                    "component, and URL. Perfect for incident analysis, "
-                    "reporting, and understanding operational issues. "
+                    "**Comprehensive Incident Analysis Tool** - Retrieves unique incidents "
+                    "from the Konflux DevLake database with advanced filtering capabilities. "
+                    "This tool automatically deduplicates incidents by incident_key to show "
+                    "only the most recent version of each incident. Supports filtering by "
+                    "status (e.g., 'DONE', 'IN_PROGRESS', 'OPEN'), component name, and "
+                    "flexible date ranges. Provides comprehensive incident data including "
+                    "incident_key, title, description, status, created_date, "
+                    "resolution_date, lead_time_minutes, component, and URL. Perfect for "
+                    "incident analysis, reporting, and understanding operational issues. "
                     "Returns incidents sorted by creation date (newest first)."
                 ),
                 inputSchema={
@@ -117,7 +115,7 @@ class IncidentTools(BaseTool):
             arguments: Tool arguments
 
         Returns:
-            JSON string with tool execution result
+            TOON-encoded string with tool execution result (token-efficient format)
         """
         try:
             # Log tool call
@@ -129,7 +127,8 @@ class IncidentTools(BaseTool):
             else:
                 result = {"success": False, "error": f"Unknown incident tool: {name}"}
 
-            return json.dumps(result, indent=2, cls=DateTimeEncoder)
+            # Use TOON format for token-efficient serialization (30-60% reduction vs JSON)
+            return toon_encode(result, {"delimiter": ",", "indent": 2, "lengthMarker": ""})
 
         except Exception as e:
             self.logger.error(f"Incident tool call failed: {e}")
@@ -140,7 +139,8 @@ class IncidentTools(BaseTool):
                 "tool_name": name,
                 "arguments": arguments,
             }
-            return json.dumps(error_result, indent=2, cls=DateTimeEncoder)
+            # Use TOON format for error responses as well
+            return toon_encode(error_result, {"delimiter": ",", "indent": 2, "lengthMarker": ""})
 
     async def _get_incidents_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -172,61 +172,57 @@ class IncidentTools(BaseTool):
                     ),
                 }
 
-            base_query = (
-                "SELECT t1.* FROM lake.incidents t1 "
-                "INNER JOIN ("
-                "  SELECT incident_key, MAX(id) AS max_id "
-                "  FROM lake.incidents GROUP BY incident_key"
-                ") t2 "
-                "ON t1.incident_key = t2.incident_key AND t1.id = t2.max_id "
-            )
+            # Build the base query with deduplication
+            base_query = """
+            WITH _incident_rank AS (
+                SELECT
+                    i.*,
+                    row_number() OVER(
+                        PARTITION BY i.incident_key
+                        ORDER BY i.updated_date DESC
+                    ) as _incident_rank
+                FROM lake.incidents i
+                WHERE 1=1
+            """
 
-            # Build WHERE clause with filters
+            # Build WHERE conditions
             where_conditions = []
 
             if status:
-                where_conditions.append(f"t1.status = '{status}'")
+                where_conditions.append(f"i.status = '{status}'")
 
             if component:
-                where_conditions.append(f"t1.component = '{component}'")
+                where_conditions.append(f"i.component = '{component}'")
 
             # Date filtering - prioritize explicit date ranges over days_back
             if start_date or end_date:
-                # Use explicit date range filtering
                 if start_date:
-                    # If start_date doesn't have time, assume 00:00:00
-                    if len(start_date) == 10:  # YYYY-MM-DD format
+                    if len(start_date) == 10:
                         start_date = f"{start_date} 00:00:00"
-                    where_conditions.append(f"t1.{date_field} >= '{start_date}'")
+                    where_conditions.append(f"i.{date_field} >= '{start_date}'")
 
                 if end_date:
-                    # If end_date doesn't have time, assume 23:59:59 to capture full day
-                    if len(end_date) == 10:  # YYYY-MM-DD format
+                    if len(end_date) == 10:
                         end_date = f"{end_date} 23:59:59"
-                    where_conditions.append(f"t1.{date_field} <= '{end_date}'")
+                    where_conditions.append(f"i.{date_field} <= '{end_date}'")
             elif days_back > 0:
-                # Fall back to days_back filtering
-                from datetime import datetime, timedelta
-
                 start_date_calc = datetime.now() - timedelta(days=days_back)
                 start_date_str = start_date_calc.strftime("%Y-%m-%d %H:%M:%S")
-                where_conditions.append(f"t1.{date_field} >= '{start_date_str}'")
+                where_conditions.append(f"i.{date_field} >= '{start_date_str}'")
 
-            # Add WHERE clause if we have conditions
+            # Add WHERE conditions to base query
             if where_conditions:
-                base_query += "WHERE " + " AND ".join(where_conditions) + " "
+                base_query += "\n                AND " + "\n                AND ".join(
+                    where_conditions
+                )
 
-            # Add ordering and limit
-            base_query += f"ORDER BY t1.{date_field} DESC "
-            base_query += f"LIMIT {limit}"
-
-            log_message = (
-                f"Getting incidents with filters: status={status}, "
-                f"component={component}, days_back={days_back}, "
-                f"start_date={start_date}, end_date={end_date}, "
-                f"date_field={date_field}, limit={limit}"
+            base_query += """
             )
-            self.logger.info(log_message)
+            SELECT *
+            FROM _incident_rank
+            WHERE _incident_rank = 1
+            ORDER BY created_date DESC
+            """
 
             result = await self.db_connection.execute_query(base_query, limit)
 
