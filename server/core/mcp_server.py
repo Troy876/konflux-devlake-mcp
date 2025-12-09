@@ -74,8 +74,30 @@ class KonfluxDevLakeMCPServer:
 
         Args:
             transport: Transport layer implementation
+
+        Raises:
+            ConnectionError: If database connection cannot be established
         """
         self.logger.info(f"Starting MCP server with {transport.__class__.__name__}")
+
+        # Initialize database connection pool at startup (eager initialization)
+        # Server will not start if database is unreachable
+        self.logger.info("Initializing database connection pool...")
+        result = await self.db_connection.connect()
+        if not result.get("success"):
+            error_msg = f"Database connection failed: {result.get('error')}"
+            self.logger.error(error_msg)
+            self.logger.error("Server cannot start without database connection. Exiting.")
+            raise ConnectionError(error_msg)
+
+        pool_info = self.db_connection.get_connection_info()
+        self.logger.info(
+            f"Database pool initialized: "
+            f"size={pool_info.get('pool_size', 'N/A')}, "
+            f"min={pool_info.get('pool_minsize', 'N/A')}, "
+            f"max={pool_info.get('pool_maxsize', 'N/A')}"
+        )
+
         await transport.start(self.server)
 
     async def shutdown(self):

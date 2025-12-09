@@ -13,6 +13,7 @@ metadata:
   annotations:
     openshift.io/display-name: "Konflux MCP Server"
     openshift.io/host.generated: "true"
+    haproxy.router.openshift.io/timeout: 500s
 spec:
   port:
     targetPort: http

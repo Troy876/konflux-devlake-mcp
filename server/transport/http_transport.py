@@ -197,7 +197,7 @@ class HttpTransport(BaseTransport):
 
         security_manager = KonfluxDevLakeSecurityManager(config)
 
-        async def health_check(request):
+        async def health_check(_request):
             """Health check endpoint."""
             return JSONResponse(
                 {
@@ -207,7 +207,7 @@ class HttpTransport(BaseTransport):
                 }
             )
 
-        async def security_stats(request):
+        async def security_stats(_request):
             """Security statistics endpoint."""
             stats = security_manager.get_security_stats()
             return JSONResponse(stats)

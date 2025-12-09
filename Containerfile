@@ -18,7 +18,9 @@ WORKDIR /app
 # python3.11-devel: Python development headers
 # git: Required for installing packages from git repositories (toon-format)
 # Note: Python 3.11 is required for mcp>=1.8.0
-RUN dnf install -y --nodocs \
+# Update all packages first to get latest security patches
+RUN dnf update -y --nodocs \
+    && dnf install -y --nodocs \
     python3.11 \
     python3.11-pip \
     python3.11-devel \
@@ -66,7 +68,9 @@ WORKDIR /app
 # ca-certificates: For SSL/TLS certificate validation
 # libffi: Runtime library for cryptography
 # openssl-libs: Runtime library for SSL/TLS
-RUN dnf install -y --nodocs \
+# Update all packages to get latest security patches
+RUN dnf update -y --nodocs \
+    && dnf install -y --nodocs \
     python3.11 \
     ca-certificates \
     libffi \

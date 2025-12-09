@@ -175,6 +175,9 @@ class TestKonfluxDevLakeConfig:
             "connect_timeout": 60,
             "read_timeout": 600,
             "write_timeout": 120,
+            "pool_min_size": 5,
+            "pool_max_size": 50,
+            "pool_recycle": 300,
         }
 
         assert db_config == expected
