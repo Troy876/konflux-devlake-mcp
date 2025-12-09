@@ -1,17 +1,18 @@
 # Konflux DevLake MCP Server Requirements
 
 # Core MCP dependencies
-mcp>=1.8.0
+mcp>=1.23.0
 
 # Database connectivity
 pymysql>=1.1.0
+aiomysql>=0.2.0
 
 # HTTP server dependencies
-uvicorn>=0.24.0
-starlette>=0.27.0
+uvicorn>=0.34.0
+starlette>=0.49.1
 
 # Security and utilities
-cryptography>=41.0.0
+cryptography>=46.0.3
 bcrypt>=4.0.0
 
 # Logging and monitoring

@@ -19,6 +19,9 @@ class DatabaseConfig:
         connect_timeout=60,
         read_timeout=600,
         write_timeout=120,
+        pool_min_size=5,
+        pool_max_size=50,
+        pool_recycle=300,
     ):
         self.host = host
         self.port = port
@@ -28,6 +31,10 @@ class DatabaseConfig:
         self.connect_timeout = connect_timeout
         self.read_timeout = read_timeout
         self.write_timeout = write_timeout
+        # Connection pool settings for multi-user concurrent access
+        self.pool_min_size = pool_min_size
+        self.pool_max_size = pool_max_size
+        self.pool_recycle = pool_recycle
 
 
 class ServerConfig:
@@ -82,6 +89,16 @@ class KonfluxDevLakeConfig:
         self.database.write_timeout = int(
             os.getenv("DB_WRITE_TIMEOUT", str(self.database.write_timeout))
         )
+        # Connection pool configuration for multi-user support
+        self.database.pool_min_size = int(
+            os.getenv("DB_POOL_MIN_SIZE", str(self.database.pool_min_size))
+        )
+        self.database.pool_max_size = int(
+            os.getenv("DB_POOL_MAX_SIZE", str(self.database.pool_max_size))
+        )
+        self.database.pool_recycle = int(
+            os.getenv("DB_POOL_RECYCLE", str(self.database.pool_recycle))
+        )
 
         # Server configuration
         self.server.transport = os.getenv("TRANSPORT", self.server.transport)
@@ -110,6 +127,9 @@ class KonfluxDevLakeConfig:
             "connect_timeout": self.database.connect_timeout,
             "read_timeout": self.database.read_timeout,
             "write_timeout": self.database.write_timeout,
+            "pool_min_size": self.database.pool_min_size,
+            "pool_max_size": self.database.pool_max_size,
+            "pool_recycle": self.database.pool_recycle,
         }
 
     def get_server_config(self) -> dict:
