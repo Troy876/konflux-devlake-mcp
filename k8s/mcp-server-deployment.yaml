@@ -82,13 +82,17 @@ spec:
               value: /app/logs
             - name: PYTHONPATH
               value: /app
+            # SSE/Long-lived connection timeouts (1 hour)
+            - name: SERVER_TIMEOUT_KEEP_ALIVE
+              value: "3600"
+            - name: SERVER_TIMEOUT_GRACEFUL_SHUTDOWN
+              value: "300"
           resources:
             requests:
-              memory: 512Mi
-              cpu: 250m
+              cpu: "2"
+              memory: "4Gi"
             limits:
-              memory: 1Gi
-              cpu: 500m
+              memory: "8Gi"
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
@@ -98,20 +102,30 @@ spec:
                 - ALL
             seccompProfile:
               type: RuntimeDefault
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 3000
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
-          readinessProbe:
+          startupProbe:
             httpGet:
               path: /health
               port: 3000
             initialDelaySeconds: 10
-            periodSeconds: 5
-            timeoutSeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 120
+            periodSeconds: 60
+            timeoutSeconds: 30
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
           command:
             - python3
           args:

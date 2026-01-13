@@ -45,12 +45,13 @@ class ServerConfig:
         transport="stdio",
         host="0.0.0.0",
         port=3000,
-        timeout_keep_alive=600,
-        timeout_graceful_shutdown=120,
+        timeout_keep_alive=3600,
+        timeout_graceful_shutdown=300,
     ):
         self.transport = transport
         self.host = host
         self.port = port
+        # Keep-alive timeout for SSE/long-lived connections (1 hour default)
         self.timeout_keep_alive = timeout_keep_alive
         self.timeout_graceful_shutdown = timeout_graceful_shutdown
 
