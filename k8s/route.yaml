@@ -13,7 +13,12 @@ metadata:
   annotations:
     openshift.io/display-name: "Konflux MCP Server"
     openshift.io/host.generated: "true"
-    haproxy.router.openshift.io/timeout: 500s
+    # Extended timeout for SSE/long-lived connections (1 hour)
+    # This is the main timeout that controls how long connections stay open
+    haproxy.router.openshift.io/timeout: 3600s
+    # Load balancing configuration
+    haproxy.router.openshift.io/balance: roundrobin
+    haproxy.router.openshift.io/disable_cookies: "true"
 spec:
   port:
     targetPort: http
